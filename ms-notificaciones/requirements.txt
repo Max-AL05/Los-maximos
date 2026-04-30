@@ -1,0 +1,13 @@
+Django==5.1.3
+djangorestframework==3.15.2
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.6.0
+drf-spectacular==0.27.2
+psycopg2-binary==2.9.10
+python-dotenv==1.0.1
+grpcio==1.68.0
+grpcio-tools==1.68.0
+protobuf==5.28.3
+gunicorn==23.0.0
+# Envío de correos – Django ya trae backend SMTP nativo, esto es para HTML templating avanzado
+Jinja2==3.1.4

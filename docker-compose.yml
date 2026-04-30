@@ -1,0 +1,189 @@
+# Orquestación completa del backend AGM.
+#
+# Uso:
+#   docker-compose up --build              # levanta todo
+#   docker-compose up ms-auth db-auth      # solo un MS y su BD
+#   docker-compose down -v                 # tumba todo y borra volúmenes
+#
+# Cada microservicio tiene su propia base de datos PostgreSQL aislada.
+# La comunicación entre microservicios se hace por la red interna 'agm-net'
+# usando los nombres de servicio como hostnames (ej: ms-auth:50051).
+
+services:
+  # ========================================================================
+  # BASES DE DATOS – una por microservicio (aislamiento de datos)
+  # ========================================================================
+  db-auth:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agm_auth_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - data-auth:/var/lib/postgresql/data
+    networks: [agm-net]
+
+  db-periodos:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agm_periodos_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - data-periodos:/var/lib/postgresql/data
+    networks: [agm-net]
+
+  db-alumnos:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agm_alumnos_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - data-alumnos:/var/lib/postgresql/data
+    networks: [agm-net]
+
+  db-calificaciones:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agm_calif_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - data-calificaciones:/var/lib/postgresql/data
+    networks: [agm-net]
+
+  db-asistencias:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agm_asistencias_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - data-asistencias:/var/lib/postgresql/data
+    networks: [agm-net]
+
+  db-notificaciones:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agm_notif_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - data-notificaciones:/var/lib/postgresql/data
+    networks: [agm-net]
+
+  db-reportes:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agm_reportes_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - data-reportes:/var/lib/postgresql/data
+    networks: [agm-net]
+
+  # Redis solo para MS-5 (sesiones volátiles + anti-replay de QR)
+  redis:
+    image: redis:7-alpine
+    networks: [agm-net]
+
+  # ========================================================================
+  # MICROSERVICIOS – cada uno expone REST + gRPC en puertos distintos
+  # ========================================================================
+  ms-auth:
+    build: ./ms-auth
+    env_file: ./ms-auth/.env
+    environment:
+      DB_HOST: db-auth
+    depends_on: [db-auth]
+    ports:
+      - "8001:8001"   # REST
+      - "50051:50051" # gRPC
+    networks: [agm-net]
+
+  ms-periodos:
+    build: ./ms-periodos
+    env_file: ./ms-periodos/.env
+    environment:
+      DB_HOST: db-periodos
+    depends_on: [db-periodos, ms-auth]
+    ports:
+      - "8002:8002"
+      - "50052:50052"
+    networks: [agm-net]
+
+  ms-alumnos:
+    build: ./ms-alumnos
+    env_file: ./ms-alumnos/.env
+    environment:
+      DB_HOST: db-alumnos
+    depends_on: [db-alumnos, ms-auth]
+    ports:
+      - "8003:8003"
+      - "50053:50053"
+    networks: [agm-net]
+
+  ms-calificaciones:
+    build: ./ms-calificaciones
+    env_file: ./ms-calificaciones/.env
+    environment:
+      DB_HOST: db-calificaciones
+    depends_on: [db-calificaciones, ms-auth, ms-alumnos]
+    ports:
+      - "8004:8004"
+      - "50054:50054"
+    networks: [agm-net]
+
+  ms-asistencias:
+    build: ./ms-asistencias
+    env_file: ./ms-asistencias/.env
+    environment:
+      DB_HOST: db-asistencias
+      REDIS_URL: redis://redis:6379/0
+    depends_on: [db-asistencias, redis, ms-auth, ms-alumnos]
+    ports:
+      - "8005:8005"
+      - "50055:50055"
+    networks: [agm-net]
+
+  ms-notificaciones:
+    build: ./ms-notificaciones
+    env_file: ./ms-notificaciones/.env
+    environment:
+      DB_HOST: db-notificaciones
+    depends_on: [db-notificaciones, ms-auth]
+    ports:
+      - "8006:8006"
+      - "50056:50056"
+    networks: [agm-net]
+
+  ms-reportes:
+    build: ./ms-reportes
+    env_file: ./ms-reportes/.env
+    environment:
+      DB_HOST: db-reportes
+    depends_on:
+      - db-reportes
+      - ms-auth
+      - ms-periodos
+      - ms-alumnos
+      - ms-calificaciones
+      - ms-asistencias
+    ports:
+      - "8007:8007"
+      - "50057:50057"
+    networks: [agm-net]
+
+networks:
+  agm-net:
+    driver: bridge
+
+volumes:
+  data-auth:
+  data-periodos:
+  data-alumnos:
+  data-calificaciones:
+  data-asistencias:
+  data-notificaciones:
+  data-reportes:

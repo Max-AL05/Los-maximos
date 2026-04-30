@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package periodos;
+
+// Servicio gRPC del MS-2 Periodos & Materias
+service PeriodosService {
+  rpc GetMateriaById(GetMateriaByIdRequest) returns (MateriaInfo);
+  rpc GetMateriasByDocente(GetMateriasByDocenteRequest) returns (MateriasList);
+  rpc GetPeriodoActivo(EmptyRequest) returns (PeriodoInfo);
+}
+
+message EmptyRequest {}
+
+message GetMateriaByIdRequest {
+  string materia_id = 1;
+}
+
+message MateriaInfo {
+  string materia_id = 1;
+  string nrc = 2;
+  string nombre = 3;
+  string seccion = 4;
+  string clave = 5;
+  string docente_id = 6;
+  string horario = 7;
+  string periodo_id = 8;
+  string estado = 9;        // ABIERTA | CERRADA | FINALIZADA
+}
+
+message GetMateriasByDocenteRequest {
+  string docente_id = 1;
+  string periodo_id = 2;    // opcional, si vacío => periodo activo
+}
+
+message MateriasList {
+  repeated MateriaInfo materias = 1;
+}
+
+message PeriodoInfo {
+  string periodo_id = 1;
+  string nombre = 2;
+  string fecha_inicio = 3;  // ISO-8601
+  string fecha_fin = 4;
+  string plan_estudios = 5;
+  bool activo = 6;
+}
