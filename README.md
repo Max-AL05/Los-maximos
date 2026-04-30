@@ -60,15 +60,6 @@ docker-compose up --build
 
 ## 👥 Equipo
 
-| Rol | Integrante |
-|-----|------------|
-| Líder de proyecto | _por completar_ |
-| Dev MS-1 / MS-2 | _por completar_ |
-| Dev MS-3 / MS-4 | _por completar_ |
-| Dev MS-5 / MS-6 / MS-7 | _por completar_ |
-| DBA / Arquitecto de datos | _por completar_ |
-| DevOps / Despliegue | _por completar_ |
-| QA / Testing | _por completar_ |
 
 ## 📺 Demo
 
