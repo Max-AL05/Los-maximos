@@ -1,17 +1,3 @@
-"""
-Views REST de Periodos.
-
-Endpoints:
-    GET    /periodos/
-    POST   /periodos/
-    GET    /periodos/<id>/
-    PUT    /periodos/<id>/
-    PATCH  /periodos/<id>/
-    DELETE /periodos/<id>/
-    POST   /periodos/<id>/activar/
-    GET    /periodos/activo/
-    POST   /periodos/importar/   (TODO: PDF de programación académica)
-"""
 from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -28,7 +14,6 @@ class PeriodoViewSet(viewsets.ModelViewSet):
     serializer_class = PeriodoSerializer
     permission_classes = [AllowAny]  # TODO: reemplazar por IsAuthenticated + RBAC Admin
 
-    # ---------- Crear / Actualizar con manejo de "único activo" ----------
     @transaction.atomic
     def perform_create(self, serializer):
         if serializer.validated_data.get("activo"):
@@ -41,11 +26,9 @@ class PeriodoViewSet(viewsets.ModelViewSet):
             Periodo.objects.filter(activo=True).exclude(pk=serializer.instance.pk).update(activo=False)
         serializer.save()
 
-    # ---------- Acciones extra ----------
     @action(detail=True, methods=["post"], url_path="activar")
     @transaction.atomic
     def activar(self, request, pk=None):
-        """Activa este periodo y desactiva los demás (solo uno activo a la vez)."""
         periodo = self.get_object()
         Periodo.objects.filter(activo=True).exclude(pk=periodo.pk).update(activo=False)
         periodo.activo = True
@@ -57,7 +40,6 @@ class PeriodoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="activo")
     def activo(self, request):
-        """Devuelve el periodo activo actual."""
         periodo = Periodo.objects.filter(activo=True).first()
         if not periodo:
             return Response(
@@ -71,7 +53,6 @@ class PeriodoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], parser_classes=[MultiPartParser], url_path="importar")
     def importar(self, request):
-        """Importa materias desde un PDF oficial de programación académica."""
         serializer = ImportarMateriasSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         # TODO: parsear PDF con pdfplumber, extraer NRC/nombre/sección/docente/horario,

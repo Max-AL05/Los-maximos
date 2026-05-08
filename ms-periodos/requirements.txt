@@ -12,6 +12,6 @@ gunicorn==23.0.0
 
 # gRPC se instala DESPUÉS de tener las Build Tools de Visual Studio.
 # Descomentar cuando las tengas instaladas:
-# grpcio==1.68.0
-# grpcio-tools==1.68.0
-# protobuf==5.28.3
+grpcio==1.68.0
+grpcio-tools==1.68.0
+protobuf==5.28.3

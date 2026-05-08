@@ -1,17 +1,5 @@
-"""
-Views REST de Materias.
-
-Endpoints:
-    GET    /materias/?periodo=:id&docente_id=:id&estado=ABIERTA
-    POST   /materias/
-    GET    /materias/<id>/
-    PUT    /materias/<id>/
-    PATCH  /materias/<id>/
-    DELETE /materias/<id>/
-"""
 from rest_framework import viewsets
-from rest_framework.permissions import AllowAny  # TODO: IsAuthenticated cuando MS-1 esté listo
-
+from rest_framework.permissions import AllowAny 
 from .models import Materia
 from .serializers import MateriaSerializer
 
