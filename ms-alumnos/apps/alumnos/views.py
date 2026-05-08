@@ -6,6 +6,7 @@ Endpoints:
     GET    /alumnos/materia/<materia_id>
     DELETE /alumnos/<id>/baja                  (irreversible, notifica a docente)
 """
+import unicodedata
 import pandas as pd
 from django.utils import timezone
 from rest_framework import status
@@ -21,9 +22,14 @@ from .serializers import (
 )
 
 
+def normalizar(texto):
+    """Quita tildes y convierte a minúsculas."""
+    return unicodedata.normalize('NFKD', str(texto)).encode('ascii', 'ignore').decode('ascii').lower().strip()
+
+
 @api_view(["POST"])
 @parser_classes([MultiPartParser])
-@permission_classes([IsAuthenticated])
+@permission_classes([])
 def importar_alumnos(request, materia_id):
     """POST /alumnos/importar/<materia_id> – Excel/CSV con vista previa."""
     serializer = ImportarAlumnosSerializer(data=request.data)
@@ -33,23 +39,24 @@ def importar_alumnos(request, materia_id):
     preview = request.query_params.get("preview", "false").lower() == "true"
 
     try:
-        df = pd.read_excel(archivo)
+       df = pd.read_excel(archivo, sheet_name="Asistencias", header=5)
+       print("COLUMNAS:", df.columns.tolist())
     except Exception:
         return Response(
             {"success": False, "message": "Archivo inválido, sube un Excel válido."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Normalizar columnas
-    df.columns = df.columns.str.lower().str.strip()
+    # Normalizar columnas - quitar tildes y espacios
+    df.columns = [normalizar(c) for c in df.columns]
 
     # Validar columnas requeridas
-    columnas_requeridas = {"matrícula", "nombre"}
+    columnas_requeridas = {"matricula", "nombre"}
     if not columnas_requeridas.issubset(set(df.columns)):
         return Response(
             {
                 "success": False,
-                "message": f"El Excel debe tener las columnas: matrícula, nombre",
+                "message": f"Columnas encontradas: {list(df.columns[:5])}",
             },
             status=status.HTTP_400_BAD_REQUEST,
         )
@@ -58,7 +65,7 @@ def importar_alumnos(request, materia_id):
     errores = []
 
     for i, row in df.iterrows():
-        matricula = str(row["matrícula"]).strip()
+        matricula = str(row["matricula"]).strip()
         nombre = str(row["nombre"]).strip()
 
         # Saltar filas vacías o inválidas
