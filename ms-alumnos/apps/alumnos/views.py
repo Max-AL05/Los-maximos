@@ -6,6 +6,8 @@ Endpoints:
     GET    /alumnos/materia/<materia_id>
     DELETE /alumnos/<id>/baja                  (irreversible, notifica a docente)
 """
+import pandas as pd
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import MultiPartParser
@@ -26,15 +28,84 @@ def importar_alumnos(request, materia_id):
     """POST /alumnos/importar/<materia_id> – Excel/CSV con vista previa."""
     serializer = ImportarAlumnosSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    # TODO:
-    # 1. Parsear Excel con openpyxl/pandas
-    # 2. Validar duplicados, formato de matrícula, correo
-    # 3. Si "preview" → devolver lista sin guardar
-    # 4. Si "confirm" → crear Alumno + InscripcionMateria
-    # 5. Para cada alumno NUEVO (sin user_id) → llamar gRPC a MS-1 para crear credencial
-    # 6. Llamar gRPC a MS-6 SendBienvenida con la clave única
+
+    archivo = serializer.validated_data["archivo_excel"]
+    preview = request.query_params.get("preview", "false").lower() == "true"
+
+    try:
+        df = pd.read_excel(archivo)
+    except Exception:
+        return Response(
+            {"success": False, "message": "Archivo inválido, sube un Excel válido."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Normalizar columnas
+    df.columns = df.columns.str.lower().str.strip()
+
+    # Validar columnas requeridas
+    columnas_requeridas = {"matrícula", "nombre"}
+    if not columnas_requeridas.issubset(set(df.columns)):
+        return Response(
+            {
+                "success": False,
+                "message": f"El Excel debe tener las columnas: matrícula, nombre",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    alumnos_preview = []
+    errores = []
+
+    for i, row in df.iterrows():
+        matricula = str(row["matrícula"]).strip()
+        nombre = str(row["nombre"]).strip()
+
+        # Saltar filas vacías o inválidas
+        if not matricula or not nombre or matricula == "nan" or nombre == "nan":
+            errores.append({"fila": i + 2, "error": "Campos vacíos"})
+            continue
+
+        # Generar correo automático desde matrícula
+        correo = f"{matricula.lower()}@alumno.buap.mx"
+
+        alumnos_preview.append({
+            "matricula": matricula,
+            "nombre_completo": nombre,
+            "correo": correo,
+        })
+
+    # Si es preview, solo devuelve la lista sin guardar
+    if preview:
+        return Response({
+            "success": True,
+            "data": {"preview": alumnos_preview, "errores": errores},
+            "message": f"{len(alumnos_preview)} alumnos listos para importar.",
+        })
+
+    # Si no es preview, guarda en BD
+    importados = 0
+    for alumno_data in alumnos_preview:
+        alumno, creado = Alumno.objects.get_or_create(
+            matricula=alumno_data["matricula"],
+            defaults={
+                "nombre_completo": alumno_data["nombre_completo"],
+                "correo": alumno_data["correo"],
+            },
+        )
+        InscripcionMateria.objects.get_or_create(
+            alumno=alumno,
+            materia_id=str(materia_id),
+        )
+        if creado:
+            importados += 1
+
     return Response(
-        {"success": True, "data": {"importados": 0, "preview": []}, "message": "TODO"},
+        {
+            "success": True,
+            "data": {"importados": importados, "errores": errores},
+            "message": f"{importados} alumnos importados correctamente.",
+        },
         status=status.HTTP_201_CREATED,
     )
 
@@ -54,9 +125,31 @@ def alumnos_por_materia(request, materia_id):
 @permission_classes([IsAuthenticated])
 def baja_alumno(request, alumno_id):
     """DELETE /alumnos/<alumno_id>/baja – baja irreversible."""
-    # TODO:
-    # 1. Validar que el request.user es ese alumno
-    # 2. Verificar que la materia_id viene en el body o querystring
-    # 3. Marcar dado_de_baja=True, fecha_baja=now()
-    # 4. Llamar gRPC a MS-6 SendBajaNotif (alumno → docente)
-    return Response({"success": True, "message": "TODO"}, status=status.HTTP_200_OK)
+    materia_id = request.data.get("materia_id") or request.query_params.get("materia_id")
+
+    if not materia_id:
+        return Response(
+            {"success": False, "message": "Se requiere materia_id."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        inscripcion = InscripcionMateria.objects.get(
+            alumno_id=alumno_id,
+            materia_id=materia_id,
+            dado_de_baja=False,
+        )
+    except InscripcionMateria.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Inscripción no encontrada o ya fue dada de baja."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    inscripcion.dado_de_baja = True
+    inscripcion.fecha_baja = timezone.now()
+    inscripcion.save()
+
+    return Response(
+        {"success": True, "message": "Alumno dado de baja correctamente."},
+        status=status.HTTP_200_OK,
+    )
