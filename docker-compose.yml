@@ -1,26 +1,40 @@
-# Orquestación completa del backend AGM.
+# =============================================================================
+# AGM · Orquestación de microservicios
+# =============================================================================
+# Cambios respecto al original:
+#   - Healthcheck en cada Postgres (MS no arranca migrate antes de que la BD esté lista).
+#   - Healthcheck en cada MS (depends_on con condition: service_healthy).
+#   - Passwords leídas de un .env raíz (NO hardcoded en el YAML).
+#   - Variables gRPC inyectadas para coincidir con settings.GRPC_TARGETS.
+# =============================================================================
 #
 # Uso:
-#   docker-compose up --build              # levanta todo
-#   docker-compose up ms-auth db-auth      # solo un MS y su BD
-#   docker-compose down -v                 # tumba todo y borra volúmenes
+#   docker compose up --build              # levanta todo
+#   docker compose up ms-calificaciones    # solo este MS y sus deps (db + auth + alumnos)
+#   docker compose down -v                 # tumba todo y borra volúmenes
 #
-# Cada microservicio tiene su propia base de datos PostgreSQL aislada.
-# La comunicación entre microservicios se hace por la red interna 'agm-net'
-# usando los nombres de servicio como hostnames (ej: ms-auth:50051).
+# Antes de la primera corrida:
+#   1) Crea un archivo `.env` en la raíz del repo con:
+#         POSTGRES_PASSWORD=...
+#         JWT_SECRET_KEY=...
+#         DJANGO_SECRET_KEY=...
+#   2) Asegúrate de que cada ms-X/.env exista (copia desde ms-X/.env.example).
+# =============================================================================
 
 services:
-  # ========================================================================
-  # BASES DE DATOS – una por microservicio (aislamiento de datos)
-  # ========================================================================
+  # ──────────── BASES DE DATOS ────────────
   db-auth:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: agm_auth_db
       POSTGRES_USER: agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - data-auth:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-auth:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_auth_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [agm-net]
 
   db-periodos:
@@ -28,9 +42,13 @@ services:
     environment:
       POSTGRES_DB: agm_periodos_db
       POSTGRES_USER: agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - data-periodos:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-periodos:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_periodos_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [agm-net]
 
   db-alumnos:
@@ -38,9 +56,13 @@ services:
     environment:
       POSTGRES_DB: agm_alumnos_db
       POSTGRES_USER: agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - data-alumnos:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-alumnos:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_alumnos_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [agm-net]
 
   db-calificaciones:
@@ -48,9 +70,13 @@ services:
     environment:
       POSTGRES_DB: agm_calif_db
       POSTGRES_USER: agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - data-calificaciones:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-calificaciones:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_calif_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [agm-net]
 
   db-asistencias:
@@ -58,9 +84,13 @@ services:
     environment:
       POSTGRES_DB: agm_asistencias_db
       POSTGRES_USER: agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - data-asistencias:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-asistencias:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_asistencias_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [agm-net]
 
   db-notificaciones:
@@ -68,9 +98,13 @@ services:
     environment:
       POSTGRES_DB: agm_notif_db
       POSTGRES_USER: agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - data-notificaciones:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-notificaciones:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_notif_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [agm-net]
 
   db-reportes:
@@ -78,28 +112,45 @@ services:
     environment:
       POSTGRES_DB: agm_reportes_db
       POSTGRES_USER: agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - data-reportes:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-reportes:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_reportes_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [agm-net]
 
-  # Redis solo para MS-5 (sesiones volátiles + anti-replay de QR)
   redis:
     image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks: [agm-net]
 
-  # ========================================================================
-  # MICROSERVICIOS – cada uno expone REST + gRPC en puertos distintos
-  # ========================================================================
+  # ──────────── MICROSERVICIOS ────────────
+
   ms-auth:
     build: ./ms-auth
     env_file: ./ms-auth/.env
     environment:
       DB_HOST: db-auth
-    depends_on: [db-auth]
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      db-auth:
+        condition: service_healthy
     ports:
-      - "8001:8001"   # REST
-      - "50051:50051" # gRPC
+      - "8001:8001"
+      - "50051:50051"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8001/health/"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks: [agm-net]
 
   ms-periodos:
@@ -107,7 +158,11 @@ services:
     env_file: ./ms-periodos/.env
     environment:
       DB_HOST: db-periodos
-    depends_on: [db-periodos, ms-auth]
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      db-periodos: { condition: service_healthy }
+      ms-auth:     { condition: service_healthy }
     ports:
       - "8002:8002"
       - "50052:50052"
@@ -118,10 +173,20 @@ services:
     env_file: ./ms-alumnos/.env
     environment:
       DB_HOST: db-alumnos
-    depends_on: [db-alumnos, ms-auth]
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      db-alumnos: { condition: service_healthy }
+      ms-auth:    { condition: service_healthy }
     ports:
       - "8003:8003"
       - "50053:50053"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8003/health/"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks: [agm-net]
 
   ms-calificaciones:
@@ -129,10 +194,24 @@ services:
     env_file: ./ms-calificaciones/.env
     environment:
       DB_HOST: db-calificaciones
-    depends_on: [db-calificaciones, ms-auth, ms-alumnos]
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      # Hostnames Docker — coinciden con los nombres de servicio de arriba
+      GRPC_AUTH_URL:    ms-auth:50051
+      GRPC_ALUMNOS_URL: ms-alumnos:50053
+    depends_on:
+      db-calificaciones: { condition: service_healthy }
+      ms-auth:           { condition: service_healthy }
+      ms-alumnos:        { condition: service_healthy }
     ports:
       - "8004:8004"
       - "50054:50054"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8004/health/"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks: [agm-net]
 
   ms-asistencias:
@@ -140,8 +219,14 @@ services:
     env_file: ./ms-asistencias/.env
     environment:
       DB_HOST: db-asistencias
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       REDIS_URL: redis://redis:6379/0
-    depends_on: [db-asistencias, redis, ms-auth, ms-alumnos]
+    depends_on:
+      db-asistencias: { condition: service_healthy }
+      redis:          { condition: service_healthy }
+      ms-auth:        { condition: service_healthy }
+      ms-alumnos:     { condition: service_healthy }
     ports:
       - "8005:8005"
       - "50055:50055"
@@ -152,7 +237,11 @@ services:
     env_file: ./ms-notificaciones/.env
     environment:
       DB_HOST: db-notificaciones
-    depends_on: [db-notificaciones, ms-auth]
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      db-notificaciones: { condition: service_healthy }
+      ms-auth:           { condition: service_healthy }
     ports:
       - "8006:8006"
       - "50056:50056"
@@ -163,13 +252,15 @@ services:
     env_file: ./ms-reportes/.env
     environment:
       DB_HOST: db-reportes
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     depends_on:
-      - db-reportes
-      - ms-auth
-      - ms-periodos
-      - ms-alumnos
-      - ms-calificaciones
-      - ms-asistencias
+      db-reportes:       { condition: service_healthy }
+      ms-auth:           { condition: service_healthy }
+      ms-periodos:       { condition: service_started }
+      ms-alumnos:        { condition: service_healthy }
+      ms-calificaciones: { condition: service_healthy }
+      ms-asistencias:    { condition: service_started }
     ports:
       - "8007:8007"
       - "50057:50057"

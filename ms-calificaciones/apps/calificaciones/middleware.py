@@ -1,59 +1,98 @@
+"""
+Middleware JWT.
+
+Cada request entrante (excepto rutas públicas) debe traer el header
+    Authorization: Bearer <jwt>
+
+El middleware llama a MS-1 vía gRPC para validar. Posibles respuestas:
+
+    | situación                     | status |
+    |-------------------------------|--------|
+    | header faltante / mal formado | 401    |
+    | token inválido / expirado     | 401    |
+    | MS-1 caído / unreachable      | 503    |
+    | error inesperado del cliente  | 500    |
+
+Es importante distinguir 401 de 503: 401 le dice al cliente "tu token está
+mal", 503 le dice "el sistema de auth no está disponible, reintenta". Si los
+mezcláramos, un alumno con token bueno vería 401 cuando MS-1 se reinicia.
+"""
+import logging
+
 import grpc
 from django.http import JsonResponse
+
 from .auth_client import AuthClient
 
+
+logger = logging.getLogger(__name__)
+
+
+# Rutas que NO requieren JWT.
+# /admin/ y /api/docs/ son herramientas de soporte; /health/ es para
+# probes de Docker/Kubernetes.
+_EXEMPT_PATHS = (
+    "/admin/",
+    "/api/schema/",
+    "/api/docs/",
+    "/health/",
+)
+
+
+def _json_error(message: str, status: int) -> JsonResponse:
+    return JsonResponse({"success": False, "message": message}, status=status)
+
+
 class JWTAuthMiddleware:
+
     def __init__(self, get_response):
         self.get_response = get_response
+        # Cliente reutilizable (un solo canal gRPC compartido).
         self.auth_client = AuthClient()
 
     def __call__(self, request):
-        # 1. Excluir rutas que no requieren autenticación
-        # Agregamos /api/docs o similares si usas Swagger/OpenAPI
-        exempt_paths = ['/admin/', '/api/schema/', '/api/docs/']
-        if any(request.path.startswith(path) for path in exempt_paths):
+        # Bypass para rutas públicas.
+        if any(request.path.startswith(p) for p in _EXEMPT_PATHS):
             return self.get_response(request)
 
-        # 2. Extracción segura del token
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return JsonResponse({
-                "success": False, 
-                "message": "Cabecera de autorización faltante o formato inválido (Bearer <token>)."
-            }, status=401)
+        # 1) Cabecera presente y bien formada.
+        auth_header = request.headers.get("Authorization", "")
+        parts = auth_header.split(" ", 1)
+        if len(parts) != 2 or parts[0] != "Bearer" or not parts[1].strip():
+            return _json_error(
+                "Cabecera de autorización faltante o formato inválido (Bearer <token>).",
+                401,
+            )
+        token = parts[1].strip()
 
+        # 2) Llamada a MS-1.
         try:
-            parts = auth_header.split(' ')
-            if len(parts) != 2:
-                raise ValueError("Token mal formado.")
-            token = parts[1]
-
-            # 3. Validar con el MS-1 vía gRPC con manejo de errores de conexión
-            is_valid, user_claims = self.auth_client.validar_token(token)
-
-            if not is_valid:
-                return JsonResponse({
-                    "success": False, 
-                    "message": "Acceso denegado: Token inválido, expirado o revocado."
-                }, status=401)
-
-            # 4. Inyectar datos en la request de forma segura
-            # Usamos atributos que no choquen con los de Django Auth si se usa a la par
-            request.user_id = user_claims.user_id
-            request.user_role = user_claims.role  # Administrador, Docente o Alumno
-
-        except ValueError as e:
-            return JsonResponse({"success": False, "message": str(e)}, status=401)
+            is_valid, claims = self.auth_client.validar_token(token)
         except grpc.RpcError as e:
-            # Si el MS-1 (Auth) está caído, devolvemos un 503 (Servicio no disponible)
-            return JsonResponse({
-                "success": False, 
-                "message": "Error de comunicación con el servicio de autenticación."
-            }, status=503)
+            code = e.code() if hasattr(e, "code") else None
+            # UNAVAILABLE / DEADLINE_EXCEEDED → MS-1 está caído o lento.
+            if code in (grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.DEADLINE_EXCEEDED):
+                logger.error("[JWTAuthMiddleware] MS-1 inalcanzable: %s", code)
+                return _json_error(
+                    "Servicio de autenticación no disponible. Reintenta en unos segundos.",
+                    503,
+                )
+            logger.error("[JWTAuthMiddleware] Error gRPC inesperado: %s", e)
+            return _json_error("Error al validar el token.", 500)
         except Exception as e:
-            return JsonResponse({
-                "success": False, 
-                "message": "Error interno al procesar la autenticación."
-            }, status=500)
+            logger.exception("[JWTAuthMiddleware] Error inesperado: %s", e)
+            return _json_error("Error interno al procesar la autenticación.", 500)
+
+        if not is_valid:
+            return _json_error(
+                "Acceso denegado: token inválido, expirado o revocado.",
+                401,
+            )
+
+        # 3) Inyectar claims en la request.
+        # NO usamos request.user para no chocar con django.contrib.auth.
+        request.user_id   = claims.user_id
+        request.user_role = claims.role     # ADMIN | DOCENTE | ALUMNO
+        request.user_email = claims.email
 
         return self.get_response(request)

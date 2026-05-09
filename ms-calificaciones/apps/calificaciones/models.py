@@ -1,7 +1,14 @@
-"""Modelos de Actividades y Calificaciones."""
+"""
+Modelos de actividades y calificaciones.
+
+Mantenemos los modelos como POPOs de Django sin lógica de estatus
+duplicada — esa regla vive en `apps.calificaciones.services` y se
+comparte entre REST, gRPC y serializers.
+"""
 import uuid
+
 from django.db import models
-from decimal import Decimal, ROUND_HALF_UP
+
 from apps.ponderaciones.models import Ponderacion
 
 
@@ -22,25 +29,13 @@ class Actividad(models.Model):
         db_table = "actividades"
         ordering = ["fecha", "nombre"]
 
+    def __str__(self):
+        return f"{self.nombre} ({self.ponderacion.nombre})"
+
 
 class Calificacion(models.Model):
     """Calificación de un alumno en una actividad concreta."""
-    @property
-    def valor_redondeado(self):
-        """Aplica la regla institucional de redondeo."""
-        return self.valor.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
 
-    @property
-    def estatus_alumno(self):
-        """Diferencia alumnos aprobados, en riesgo o reprobados."""
-        nota = self.valor_redondeado
-        if nota >= 8:
-            return "APROBADO"
-        elif 6 <= nota < 8:
-            return "EN RIESGO"
-        else:
-            return "REPROBADO"
-        
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     actividad = models.ForeignKey(
         Actividad, on_delete=models.CASCADE, related_name="calificaciones"
@@ -58,3 +53,6 @@ class Calificacion(models.Model):
             models.Index(fields=["alumno_id"]),
             models.Index(fields=["actividad", "alumno_id"]),
         ]
+
+    def __str__(self):
+        return f"{self.alumno_id} – {self.actividad.nombre}: {self.valor}"
