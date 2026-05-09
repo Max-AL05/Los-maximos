@@ -1,4 +1,3 @@
-"""Configuración del Django admin para los modelos de Auth & Users."""
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
@@ -7,10 +6,7 @@ from .models import PasswordResetToken, User
 
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
-    """
-    Adapta el UserAdmin estándar a nuestro modelo (sin `username`,
-    con `role` y los campos extra).
-    """
+
     ordering = ("email",)
     list_display = ("email", "nombre_completo", "role", "is_active", "is_staff")
     list_filter = ("role", "is_active", "is_staff")

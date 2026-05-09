@@ -4,14 +4,10 @@ djangorestframework-simplejwt==5.3.1
 django-cors-headers==4.6.0
 drf-spectacular==0.27.2
 
-# Driver PostgreSQL para Windows sin necesidad de compilar
-# (versión pre-compilada en wheel)
 psycopg2-binary
 python-dotenv==1.0.1
 gunicorn==23.0.0
 
-# gRPC se instala DESPUÉS de tener las Build Tools de Visual Studio.
-# Descomentar cuando las tengas instaladas:
-# grpcio==1.68.0
-# grpcio-tools==1.68.0
-# protobuf==5.28.3
+grpcio==1.68.0
+grpcio-tools==1.68.0
+protobuf==5.28.3

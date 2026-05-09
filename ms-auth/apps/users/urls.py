@@ -1,4 +1,3 @@
-"""URLs de MS-1 Auth & Users."""
 from django.urls import path
 
 from . import views

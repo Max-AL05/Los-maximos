@@ -1,4 +1,3 @@
-"""Serializers de MS-1 Auth & Users."""
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer # type: ignore
 
@@ -6,13 +5,7 @@ from .models import User, Role
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    """
-    Crea un usuario con cualquier rol.
 
-    En producción este endpoint debería estar restringido a Administradores
-    (para crear otros admins/docentes) y los alumnos se crean automáticamente
-    desde MS-3 al importar el Excel de la materia. Para desarrollo está abierto.
-    """
     password = serializers.CharField(write_only=True, min_length=8, style={"input_type": "password"})
 
     class Meta:
@@ -47,26 +40,17 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Login que retorna un JWT con el `role` y datos del usuario embebidos.
-
-    Esto permite que otros microservicios validen permisos sin tener que
-    llamar al MS-1 cada vez (basta con verificar la firma del token).
-    """
 
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # Custom claims que viajarán DENTRO del JWT
         token["role"] = user.role
         token["email"] = user.email
         token["nombre_completo"] = user.nombre_completo
         return token
 
     def validate(self, attrs):
-        # Genera access + refresh
         data = super().validate(attrs)
-        # Adjunta info del usuario en la respuesta también (útil para el frontend)
         data["user"] = {
             "id": str(self.user.id),
             "email": self.user.email,

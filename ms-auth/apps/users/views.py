@@ -29,25 +29,10 @@ from .serializers import (
 )
 
 
-# ---------------------------------------------------------------------------
-# Register
-# ---------------------------------------------------------------------------
 @api_view(["POST"])
-@permission_classes([AllowAny])  # ⚠️ DEV ONLY – en producción: IsAuthenticated + role=ADMIN
+@permission_classes([AllowAny])
 def register_view(request):
-    """
-    POST /auth/register
 
-    Body JSON:
-        {
-            "email": "...",
-            "password": "...",
-            "role": "ADMIN" | "DOCENTE" | "ALUMNO",
-            "nombre_completo": "...",
-            "matricula": "..."   (sólo si role=ALUMNO),
-            "cubiculo": "..."    (opcional, sólo docentes)
-        }
-    """
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
@@ -61,16 +46,8 @@ def register_view(request):
     )
 
 
-# ---------------------------------------------------------------------------
-# Login (POST /auth/login)
-# ---------------------------------------------------------------------------
 class LoginView(TokenObtainPairView):
-    """
-    Devuelve `access`, `refresh` y datos del usuario.
 
-    El access incluye los claims: user_id, role, email, nombre_completo.
-    Esto permite que MS-2..MS-7 validen el rol sin llamar al MS-1.
-    """
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
@@ -92,11 +69,7 @@ class LoginView(TokenObtainPairView):
         )
 
 
-# ---------------------------------------------------------------------------
-# Refresh token (POST /auth/refresh-token)
-# ---------------------------------------------------------------------------
 class RefreshTokenView(TokenRefreshView):
-    """Body: {"refresh": "<refresh_token>"} → {"access": "<nuevo_access>"}"""
 
     def post(self, request, *args, **kwargs):
         try:
@@ -141,13 +114,9 @@ def reset_password_view(request):
     )
 
 
-# ---------------------------------------------------------------------------
-# Me (GET /auth/me)
-# ---------------------------------------------------------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def me_view(request):
-    """GET /auth/me – datos del usuario autenticado (lee el JWT del header)."""
     return Response(
         {
             "success": True,
