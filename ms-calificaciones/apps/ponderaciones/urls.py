@@ -1,6 +1,7 @@
 from django.urls import path
-from . import views
+from .views import ponderaciones_view
 
 urlpatterns = [
-    path("<uuid:materia_id>", views.ponderaciones_view, name="ponderaciones"),
+    # Quitamos la palabra 'ponderaciones/' porque ya viene desde el config/urls.py
+    path('<str:materia_id>/', ponderaciones_view, name='ponderaciones_materia'),
 ]

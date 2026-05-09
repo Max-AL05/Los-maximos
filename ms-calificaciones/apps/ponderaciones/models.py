@@ -1,9 +1,19 @@
 """Modelos de Ponderaciones (criterios de evaluación)."""
 import uuid
 from django.db import models
-
+from django.core.exceptions import ValidationError
 
 class Ponderacion(models.Model):
+    def clean(self):
+        # Suma los porcentajes de las otras ponderaciones de la misma materia
+        total_otros = Ponderacion.objects.filter(
+            materia_id=self.materia_id
+        ).exclude(id=self.id).aggregate(models.Sum('porcentaje'))['porcentaje__sum'] or 0
+        
+        if total_otros + self.porcentaje > 100:
+            raise ValidationError(
+                f"La suma de ponderaciones excedería el 100% (Actual: {total_otros + self.porcentaje}%)."
+            )
     """
     Categoría de evaluación con su porcentaje (ej. Exámenes 40%).
 
@@ -17,6 +27,7 @@ class Ponderacion(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
 
     class Meta:
         db_table = "ponderaciones"

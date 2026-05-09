@@ -1,13 +1,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from .views import ActividadViewSet, CalificacionViewSet, importar_calificaciones, concentrado
 
 router = DefaultRouter()
-router.register(r"actividades", views.ActividadViewSet, basename="actividades")
-router.register(r"calificaciones", views.CalificacionViewSet, basename="calificaciones")
+router.register(r'actividades', ActividadViewSet) # POST /actividades 
+router.register(r'calificaciones', CalificacionViewSet) # POST /calificaciones 
 
 urlpatterns = [
-    path("calificaciones/importar", views.importar_calificaciones, name="importar-calificaciones"),
-    path("concentrado/<uuid:materia_id>", views.concentrado, name="concentrado"),
-    path("", include(router.urls)),
+    path('', include(router.urls)),
+    path('calificaciones/importar/', importar_calificaciones, name='importar_calificaciones'), # POST /calificaciones/importar
+    path('concentrado/<str:materia_id>/', concentrado, name='concentrado_materia'), # GET /concentrado/:materiaId 
 ]
