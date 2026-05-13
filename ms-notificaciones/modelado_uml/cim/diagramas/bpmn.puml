@@ -1,0 +1,38 @@
+@startuml "bpmn"
+skinparam style bpm
+skinparam monochrome true
+
+|#f5f5f5|Adoptante|
+start
+:Explorar mascotas con filtros;
+:Seleccionar perfil de mascota;
+:Completar formulario de interés;
+
+|#ffffff|Sistema|
+:Validar datos del formulario;
+:Generar notificación para el responsable;
+
+|#eeeeee|Rescatista / Refugio|
+:Recibir alerta de interesado;
+:Evaluar perfil del solicitante;
+
+if (¿Perfil compatible?) then (Sí)
+    :Iniciar contacto vía chat privado;
+    :Realizar entrevista y validación;
+    if (¿Adopción aprobada?) then (Sí)
+        :Entregar mascota;
+        |Sistema|
+        :Actualizar estado a "Adoptado";
+        :Cerrar publicación;
+        stop
+    else (No)
+        |Rescatista / Refugio|
+        :Notificar rechazo;
+        stop
+    endif
+else (No)
+    |Rescatista / Refugio|
+    :Cerrar solicitud;
+    stop
+endif
+@enduml

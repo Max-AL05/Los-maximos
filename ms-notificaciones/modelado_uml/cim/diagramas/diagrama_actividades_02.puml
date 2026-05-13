@@ -1,0 +1,29 @@
+@startuml "actividades_02"
+skinparam monochrome true
+skinparam shadowing false
+
+title Reporte de Mascota Perdida
+
+start
+:Seleccionar módulo "Mascota Perdida";
+:Ingresar información morfológica;
+
+repeat
+  :Adjuntar evidencia fotográfica;
+backward: Notificar error de formato o peso;
+repeat while (¿Fotografía válida?) is (No)
+->Sí;
+
+:Registrar última ubicación conocida y fecha;
+:Proporcionar datos de contacto;
+:Confirmar creación del reporte;
+
+partition "Procesamiento interno" {
+  :Validar integridad de los datos del reporte;
+  :Registrar alerta en el sistema central;
+  :Generar notificaciones para usuarios cercanos;
+}
+
+:Desplegar reporte en el feed central;
+stop
+@enduml

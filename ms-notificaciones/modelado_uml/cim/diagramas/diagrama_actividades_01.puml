@@ -1,0 +1,33 @@
+@startuml "actividades_01"
+skinparam monochrome true
+skinparam shadowing false
+
+title Registro y Autenticación
+
+start
+:Ingresar a la plataforma (Pantalla de Inicio);
+
+if (¿Tiene una cuenta registrada?) then (Sí)
+  :Seleccionar "Iniciar Sesión";
+  repeat
+    :Ingresar correo electrónico y contraseña;
+    partition "Sistema" {
+      :Validar credenciales en base de datos;
+    }
+  backward: Mostrar mensaje de "Credenciales incorrectas";
+  repeat while (¿Credenciales válidas?) is (No)
+  ->Sí;
+
+else (No)
+  :Seleccionar "Registrarse";
+  :Ingresar datos personales\n(Nombre, Apellido, Correo, Teléfono);
+  :Definir y confirmar contraseña;
+  partition "Sistema (Backend)" {
+    :Validar formato de datos y unicidad del correo;
+    :Crear nuevo registro de Usuario;
+  }
+endif
+
+:Otorgar acceso y redirigir al feed principal;
+stop
+@enduml

@@ -1,0 +1,7 @@
+services:
+  plantuml:
+    image: plantuml/plantuml-server:jetty
+    container_name: plantuml_render
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
