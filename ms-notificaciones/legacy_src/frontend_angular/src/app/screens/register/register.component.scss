@@ -1,0 +1,250 @@
+// Variables
+$color-terracotta: #c75a36;
+$color-terracotta-light: #d98166;
+$color-terracotta-dark: #a04527;
+$color-cream: #f5e8dc;
+$color-green: #5cb85c;
+$color-error: #dc3545;
+
+.register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: $color-cream;
+  padding: 20px;
+  background-image: radial-gradient(rgba($color-terracotta-light, 0.1) 20%, transparent 20%),
+                    radial-gradient(rgba($color-terracotta-light, 0.1) 20%, transparent 20%);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 550px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
+  position: relative;
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  .logo {
+    margin-bottom: 1rem;
+
+    h1 {
+      font-size: 1.8rem;
+      color: $color-terracotta;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .paw-icon {
+      font-size: 2.2rem;
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    color: $color-terracotta-dark;
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+form {
+  .form-row {
+    display: flex;
+    gap: 1rem;
+
+    .form-group {
+      flex: 1;
+    }
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #555;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"] {
+      width: 100%;
+      padding: 0.8rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+
+      &:focus {
+        outline: none;
+        border-color: $color-terracotta;
+        box-shadow: 0 0 0 2px rgba($color-terracotta, 0.2);
+      }
+
+      &.is-invalid {
+        border-color: $color-error;
+      }
+    }
+
+    .error-message {
+      color: $color-error;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    .password-input {
+      position: relative;
+
+      .toggle-password {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: #777;
+
+        &:focus {
+          outline: none;
+        }
+      }
+    }
+
+    &.terms {
+      margin-top: 1rem;
+
+      .checkbox-group {
+        display: flex;
+        align-items: flex-start;
+
+        input[type="checkbox"] {
+          margin-right: 0.5rem;
+          margin-top: 0.3rem;
+          accent-color: $color-terracotta;
+        }
+
+        label {
+          margin-bottom: 0;
+          font-weight: normal;
+          line-height: 1.5;
+
+          a {
+            color: $color-terracotta;
+            text-decoration: none;
+
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.register-btn {
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  background-color: $color-terracotta;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: $color-terracotta-dark;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.register-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+
+  p {
+    color: #666;
+    font-size: 0.95rem;
+  }
+
+  a {
+    color: $color-terracotta;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.3s;
+
+    &:hover {
+      color: $color-terracotta-dark;
+      text-decoration: underline;
+    }
+  }
+}
+
+.home-link {
+  text-align: center;
+  margin-top: 2rem;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    color: #666;
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color 0.3s;
+
+    .back-icon {
+      margin-right: 0.3rem;
+    }
+
+    &:hover {
+      color: $color-terracotta;
+    }
+  }
+}
+
+// Media queries for responsiveness
+@media (max-width: 600px) {
+  .register-card {
+    padding: 1.5rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .register-header {
+    margin-bottom: 1.5rem;
+
+    .logo h1 {
+      font-size: 1.5rem;
+    }
+
+    h2 {
+      font-size: 1.3rem;
+    }
+  }
+}

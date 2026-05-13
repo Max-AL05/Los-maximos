@@ -1,0 +1,352 @@
+// Variables compartidas (mismas del proyecto)
+$color-terracotta: #c75a36;
+$color-terracotta-light: #d98166;
+$color-terracotta-dark: #a04527;
+$color-cream: #f5e8dc;
+$color-green: #5cb85c;
+$color-error: #dc3545;
+$color-adopcion: #3498db;
+
+// Estilos generales
+.adopcion-container {
+  min-height: 100vh;
+  background-color: $color-cream;
+  padding: 30px 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.contenedor-formulario {
+  max-width: 800px;
+  width: 100%;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  padding: 30px;
+}
+
+// Encabezado del formulario
+.encabezado {
+  text-align: center;
+  margin-bottom: 30px;
+
+  h1 {
+    color: $color-terracotta-dark;
+    margin-bottom: 10px;
+    font-size: 2rem;
+  }
+
+  p {
+    color: #666;
+    font-size: 1.1rem;
+  }
+}
+
+// Mensaje de alerta
+.alerta {
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+
+  i {
+    margin-right: 10px;
+    font-size: 1.2rem;
+  }
+
+  &.exito {
+    background-color: rgba($color-green, 0.1);
+    color: darken($color-green, 10%);
+    border-left: 4px solid $color-green;
+  }
+
+  &.error {
+    background-color: rgba($color-error, 0.1);
+    color: darken($color-error, 10%);
+    border-left: 4px solid $color-error;
+  }
+}
+
+// Secciones del formulario
+.seccion-formulario {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  h2 {
+    color: $color-terracotta;
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+
+    i {
+      margin-right: 10px;
+    }
+  }
+}
+
+// Grid para dos columnas
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Estilos del grupo de formulario
+.grupo-formulario {
+  margin-bottom: 20px;
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #444;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+
+    &:focus {
+      border-color: $color-adopcion;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba($color-adopcion, 0.2);
+    }
+
+    &.invalid {
+      border-color: $color-error;
+    }
+  }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 16px;
+    padding-right: 40px;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  &.checkbox {
+    display: flex;
+    align-items: center;
+
+    input[type="checkbox"] {
+      margin-right: 10px;
+      width: 18px;
+      height: 18px;
+      accent-color: $color-adopcion;
+    }
+
+    label {
+      margin-bottom: 0;
+      cursor: pointer;
+    }
+  }
+}
+
+// Mensajes de error
+.error-mensaje {
+  color: $color-error;
+  font-size: 0.85rem;
+  margin-top: 5px;
+}
+
+// Área de carga de imagen
+.imagen-upload {
+  .area-carga {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+
+    &:hover {
+      border-color: $color-adopcion;
+      background-color: rgba($color-adopcion, 0.03);
+    }
+
+    &.con-imagen {
+      border-style: solid;
+      border-color: $color-adopcion;
+    }
+
+    &.error {
+      border-color: $color-error;
+      background-color: rgba($color-error, 0.03);
+    }
+
+    .instrucciones-carga {
+      i {
+        font-size: 2.5rem;
+        color: #999;
+        margin-bottom: 10px;
+      }
+
+      p {
+        margin: 0;
+        font-weight: 500;
+        color: #444;
+      }
+
+      span {
+        display: block;
+        margin-top: 5px;
+        font-size: 0.9rem;
+        color: #777;
+      }
+    }
+
+    .vista-previa {
+      width: 100%;
+      height: 100%;
+      position: relative;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .boton-eliminar {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: $color-error;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: $color-error;
+          color: white;
+        }
+      }
+    }
+  }
+
+  .texto-ayuda {
+    font-size: 0.85rem;
+    color: #777;
+    margin-top: 8px;
+  }
+}
+
+// Acciones del formulario
+.acciones-formulario {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+
+  button {
+    padding: 12px 25px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &.boton-primario {
+      background-color: $color-adopcion;
+      color: white;
+      border: none;
+
+      &:hover {
+        background-color: darken($color-adopcion, 10%);
+      }
+
+      &:disabled {
+        background-color: lighten($color-adopcion, 20%);
+        cursor: not-allowed;
+      }
+    }
+
+    &.boton-secundario {
+      background-color: #f2f2f2;
+      color: #444;
+      border: 1px solid #ddd;
+
+      &:hover {
+        background-color: #e0e0e0;
+      }
+    }
+  }
+}
+
+// Diseño responsive adicional
+@media (max-width: 768px) {
+  .contenedor-formulario {
+    padding: 20px;
+  }
+
+  .encabezado {
+    h1 {
+      font-size: 1.8rem;
+    }
+  }
+
+  .acciones-formulario {
+    flex-direction: column-reverse;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+.boton-volver {
+  background: none;
+  border: none;
+  color: #a04527; // O el color que uses en perdida
+  font-size: 1rem;
+  cursor: pointer;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+
+  i {
+    margin-right: 6px;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
