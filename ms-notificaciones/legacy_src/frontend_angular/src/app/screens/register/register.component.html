@@ -1,0 +1,135 @@
+<div class="register-container">
+  <div class="register-card">
+    <div class="register-header">
+      <div class="logo">
+        <span class="paw-icon">🐾</span>
+        <h1>PATITAS HOME</h1>
+      </div>
+      <h2>Crear una cuenta</h2>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">Nombre</label>
+          <input
+            type="text"
+            id="firstName"
+            formControlName="firstName"
+            placeholder="Ingrese su nombre"
+            [ngClass]="{'is-invalid': submitted && f['firstName'].errors}"
+          >
+          <div *ngIf="submitted && f['firstName'].errors" class="error-message">
+            <span *ngIf="f['firstName'].errors['required']">El nombre es requerido</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="lastName">Apellido</label>
+          <input
+            type="text"
+            id="lastName"
+            formControlName="lastName"
+            placeholder="Ingrese su apellido"
+            [ngClass]="{'is-invalid': submitted && f['lastName'].errors}"
+          >
+          <div *ngIf="submitted && f['lastName'].errors" class="error-message">
+            <span *ngIf="f['lastName'].errors['required']">El apellido es requerido</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Correo electrónico</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="ejemplo@correo.com"
+          [ngClass]="{'is-invalid': submitted && f['email'].errors}"
+        >
+        <div *ngIf="submitted && f['email'].errors" class="error-message">
+          <span *ngIf="f['email'].errors['required']">El correo es requerido</span>
+          <span *ngIf="f['email'].errors['email']">Ingrese un correo válido</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Teléfono</label>
+        <input
+          type="tel"
+          id="phone"
+          formControlName="phone"
+          placeholder="Ej. 5551234567"
+          [ngClass]="{'is-invalid': submitted && f['phone'].errors}"
+        >
+        <div *ngIf="submitted && f['phone'].errors" class="error-message">
+          <span *ngIf="f['phone'].errors['required']">El teléfono es requerido</span>
+          <span *ngIf="f['phone'].errors['pattern']">Ingrese un número de teléfono válido</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <div class="password-input">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            formControlName="password"
+            placeholder="Mínimo 6 caracteres"
+            [ngClass]="{'is-invalid': submitted && f['password'].errors}"
+          >
+          <button type="button" class="toggle-password" (click)="togglePasswordVisibility()">
+            <span>{{ showPassword ? '👁️' : '👁️‍🗨️' }}</span>
+          </button>
+        </div>
+        <div *ngIf="submitted && f['password'].errors" class="error-message">
+          <span *ngIf="f['password'].errors['required']">La contraseña es requerida</span>
+          <span *ngIf="f['password'].errors['minlength']">La contraseña debe tener al menos 6 caracteres</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirmar contraseña</label>
+        <div class="password-input">
+          <input
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            id="confirmPassword"
+            formControlName="confirmPassword"
+            placeholder="Confirme su contraseña"
+            [ngClass]="{'is-invalid': submitted && f['confirmPassword'].errors}"
+          >
+          <button type="button" class="toggle-password" (click)="toggleConfirmPasswordVisibility()">
+            <span>{{ showConfirmPassword ? '👁️' : '👁️‍🗨️' }}</span>
+          </button>
+        </div>
+        <div *ngIf="submitted && f['confirmPassword'].errors" class="error-message">
+          <span *ngIf="f['confirmPassword'].errors['required']">Confirmar contraseña es requerido</span>
+          <span *ngIf="f['confirmPassword'].errors['mustMatch']">Las contraseñas no coinciden</span>
+        </div>
+      </div>
+
+      <div class="form-group terms">
+        <div class="checkbox-group">
+          <input type="checkbox" id="terms" formControlName="terms">
+          <label for="terms">Acepto los <a href="javascript:void(0)">Términos y Condiciones</a> y la <a href="javascript:void(0)">Política de Privacidad</a></label>
+        </div>
+        <div *ngIf="submitted && f['terms'].errors" class="error-message">
+          <span *ngIf="f['terms'].errors['required']">Debe aceptar los términos para continuar</span>
+        </div>
+      </div>
+
+      <button type="submit" class="register-btn">Crear Cuenta</button>
+
+      <div class="register-footer">
+        <p>¿Ya tienes una cuenta? <a [routerLink]="['/login']">Inicia sesión aquí</a></p>
+      </div>
+    </form>
+
+    <div class="home-link">
+      <a [routerLink]="['/home']">
+        <span class="back-icon">←</span> Volver al inicio
+      </a>
+    </div>
+  </div>
+</div>

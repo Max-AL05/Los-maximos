@@ -1,0 +1,149 @@
+<div class="feed-container">
+  <!-- Barra de Navegación Superior -->
+  <div class="barra-superior">
+    <div class="nav-izquierda">
+      <button class="boton-feed activo">
+        <i class="fas fa-home"></i> Feed
+      </button>
+    </div>
+    <div class="nav-derecha">
+      <button class="boton-salir" (click)="cerrarSesion()">
+        <i class="fas fa-sign-out-alt"></i> Salir
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda avanzada -->
+  <div class="contenedor-busqueda">
+    <input type="text" placeholder="Tipo de mascota" [(ngModel)]="filtros.tipo_mascota">
+    <input type="text" placeholder="Raza" [(ngModel)]="filtros.raza">
+    <input type="text" placeholder="Color" [(ngModel)]="filtros.color">
+    <input type="text" placeholder="Tamaño" [(ngModel)]="filtros.tamanio">
+    <input type="text" placeholder="Zona o ubicación" [(ngModel)]="filtros.zona">
+    <button class="boton-buscar" (click)="buscar()">
+      <i class="fas fa-search"></i> Buscar
+    </button>
+    <button class="boton-buscar" (click)="limpiarFiltros()">
+      <i class="fas fa-times"></i> Limpiar
+    </button>
+  </div>
+
+  <!-- Área de Contenido Principal -->
+  <div class="contenido-principal">
+    <!-- Barra Lateral Izquierda -->
+    <div class="barra-lateral barra-izquierda">
+      <div class="contenido-lateral">
+        <h3>Acciones Rápidas</h3>
+        <div class="botones-accion">
+          <button class="boton-accion boton-perdida" (click)="publicarMascotaPerdida()">
+            <i class="fas fa-search"></i>
+            Publicar Mascota Perdida
+          </button>
+          <button class="boton-accion boton-encontrada" (click)="publicarMascotaEncontrada()">
+            <i class="fas fa-paw"></i>
+            Publicar Mascota Encontrada
+          </button>
+          <button class="boton-accion boton-adopcion" (click)="publicarEnAdopcion()">
+            <i class="fas fa-heart"></i>
+            Publicar en Adopción
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feed Central -->
+    <div class="feed">
+      <div class="feed-encabezado">
+        <h2>Feed de Mascotas</h2>
+      </div>
+
+      <div class="tarjetas-mascotas">
+        <div class="tarjeta-mascota" *ngFor="let publicacion of publicaciones">
+          <div class="etiqueta-estado" [ngClass]="publicacion.tipo">
+            {{ publicacion.tipo | titlecase }}
+          </div>
+          <img
+              class="imagen-mascota"
+              [src]="
+                publicacion.mascotas?.length && publicacion.mascotas[0]?.fotos
+                  ? 'http://localhost:8000' + publicacion.mascotas[0].fotos
+                  : (publicacion.mascotas_encontradas?.length && publicacion.mascotas_encontradas[0]?.fotos
+                    ? 'http://localhost:8000' + publicacion.mascotas_encontradas[0].fotos
+                    : (publicacion.mascotas_adopcion?.length && publicacion.mascotas_adopcion[0]?.foto
+                      ? 'http://localhost:8000' + publicacion.mascotas_adopcion[0].foto
+                      : 'assets/images/default-pet.jpg'))
+              "
+              [alt]="
+                publicacion.mascotas?.length
+                  ? publicacion.mascotas[0]?.nombre
+                  : (publicacion.mascotas_encontradas?.length
+                    ? publicacion.mascotas_encontradas[0]?.nombre
+                    : (publicacion.mascotas_adopcion?.length
+                      ? publicacion.mascotas_adopcion[0]?.nombre
+                      : 'Mascota'))
+              "
+            >
+          <div class="info-mascota">
+            <h3>
+              {{
+                publicacion.mascotas?.length
+                  ? publicacion.mascotas[0]?.nombre
+                  : (publicacion.mascotas_encontradas?.length
+                    ? publicacion.mascotas_encontradas[0]?.nombre
+                    : 'Mascota')
+              }}
+            </h3>
+            <p>{{ publicacion.contenido }}</p>
+            <div class="acciones-tarjeta">
+              <button class="boton-detalles" (click)="verDetallesMascota(publicacion)">Ver Detalles</button>
+              <button class="boton-contacto">Contactar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra Lateral Derecha -->
+    <div class="barra-lateral barra-derecha">
+      <div class="contenido-lateral">
+        <h3>Actividad Reciente</h3>
+        <div class="lista-actividades">
+          <div class="item-actividad">
+            <div class="icono-actividad encontrada">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="detalles-actividad">
+              <p><strong>Milo</strong> fue encontrado!</p>
+              <span class="tiempo-actividad">hace 1 hora</span>
+            </div>
+          </div>
+          <div class="item-actividad">
+            <div class="icono-actividad adopcion">
+              <i class="fas fa-home"></i>
+            </div>
+            <div class="detalles-actividad">
+              <p><strong>Luna</strong> fue adoptada!</p>
+              <span class="tiempo-actividad">hace 3 horas</span>
+            </div>
+          </div>
+          <div class="item-actividad">
+            <div class="icono-actividad perdida">
+              <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div class="detalles-actividad">
+              <p><strong>Charlie</strong> fue reportado como perdido</p>
+              <span class="tiempo-actividad">hace 5 horas</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de detalles (aparece cuando modalVisible es true) -->
+  <app-modal-mascota
+    *ngIf="modalVisible"
+    [mascota]="mascotaSeleccionada"
+    (cerrar)="cerrarModal()">
+  </app-modal-mascota>
+</div>

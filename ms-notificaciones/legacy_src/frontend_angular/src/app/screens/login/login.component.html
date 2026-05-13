@@ -1,0 +1,68 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="logo">
+        <span class="paw-icon">🐾</span>
+        <h1>PATITAS HOME</h1>
+      </div>
+      <h2>Iniciar Sesión</h2>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="email">Correo electrónico</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="ejemplo@correo.com"
+          [ngClass]="{'is-invalid': submitted && f['email'].errors}"
+        >
+        <div *ngIf="submitted && f['email'].errors" class="error-message">
+          <span *ngIf="f['email'].errors['required']">El correo es requerido</span>
+          <span *ngIf="f['email'].errors['email']">Ingrese un correo válido</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <div class="password-input">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            formControlName="password"
+            placeholder="Ingrese su contraseña"
+            [ngClass]="{'is-invalid': submitted && f['password'].errors}"
+          >
+          <button type="button" class="toggle-password" (click)="togglePasswordVisibility()">
+            <span>{{ showPassword ? '👁️' : '👁️‍🗨️' }}</span>
+          </button>
+        </div>
+        <div *ngIf="submitted && f['password'].errors" class="error-message">
+          <span *ngIf="f['password'].errors['required']">La contraseña es requerida</span>
+          <span *ngIf="f['password'].errors['minlength']">La contraseña debe tener al menos 6 caracteres</span>
+        </div>
+      </div>
+
+      <div class="form-group remember-forgot">
+        <div class="remember-me">
+          <input type="checkbox" id="remember" formControlName="remember">
+          <label for="remember">Recordarme</label>
+        </div>
+        <a href="javascript:void(0)" class="forgot-password">¿Olvidaste tu contraseña?</a>
+      </div>
+
+      <button type="submit" class="login-btn">Iniciar Sesión</button>
+
+      <div class="login-footer">
+        <p>¿No tienes una cuenta? <a [routerLink]="['/register']">Regístrate aquí</a></p>
+      </div>
+    </form>
+
+    <div class="home-link">
+      <a [routerLink]="['/home']">
+        <span class="back-icon">←</span> Volver al inicio
+      </a>
+    </div>
+  </div>
+</div>

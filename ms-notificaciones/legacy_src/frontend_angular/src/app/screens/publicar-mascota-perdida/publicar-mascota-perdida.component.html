@@ -1,0 +1,177 @@
+<div class="formulario-container">
+  <div class="encabezado">
+    <button class="boton-volver" (click)="volver()">
+      <i class="fas fa-arrow-left"></i> Volver
+    </button>
+    <h1>Publicar Mascota Perdida</h1>
+  </div>
+
+  <div class="contenido-formulario">
+    <form [formGroup]="formularioMascota" (ngSubmit)="onSubmit()">
+      <!-- Sección de información básica -->
+      <div class="seccion">
+        <h2>Información Básica</h2>
+
+        <div class="campo">
+          <label for="nombre">Nombre de la mascota</label>
+          <input type="text" id="nombre" formControlName="nombre" placeholder="Ej: Max">
+          <div class="error-mensaje" *ngIf="formularioMascota.get('nombre')?.invalid && formularioMascota.get('nombre')?.touched">
+            Por favor ingresa el nombre de tu mascota
+          </div>
+        </div>
+
+        <div class="campo">
+          <label for="especie">Especie</label>
+          <select id="especie" formControlName="especie">
+            <option value="">Selecciona una especie</option>
+            <option value="perro">Perro</option>
+            <option value="gato">Gato</option>
+            <option value="ave">Ave</option>
+            <option value="conejo">Conejo</option>
+            <option value="otro">Otro</option>
+          </select>
+          <div class="error-mensaje" *ngIf="formularioMascota.get('especie')?.invalid && formularioMascota.get('especie')?.touched">
+            Por favor selecciona una especie
+          </div>
+        </div>
+
+        <div class="campo" *ngIf="formularioMascota.get('especie')?.value === 'otro'">
+          <label for="otra_especie">Especifica la especie</label>
+          <input type="text" id="otra_especie" formControlName="otra_especie" placeholder="Ej: Hurón">
+        </div>
+
+
+        <div class="campo">
+          <label for="raza">Raza (opcional)</label>
+          <input type="text" id="raza" formControlName="raza" placeholder="Ej: Golden Retriever">
+        </div>
+
+        <div class="campo">
+          <label for="edad">Edad aproximada</label>
+          <div class="campo-grupo">
+            <input type="number" id="edad" formControlName="edad" min="0" placeholder="Ej: 3">
+            <select id="unidad_edad" formControlName="unidad_edad">
+              <option value="año(s)">Año(s)</option>
+              <option value="mes(es)">Mes(es)</option>
+              <option value="semana(s)">Semana(s)</option>
+            </select>
+           </div>
+        </div>
+
+        <div class="campo">
+          <label for="sexo">Sexo</label>
+          <div class="opciones-radio">
+            <div class="opcion-radio">
+              <input type="radio" id="macho" formControlName="sexo" value="macho">
+              <label for="macho">Macho</label>
+            </div>
+            <div class="opcion-radio">
+              <input type="radio" id="hembra" formControlName="sexo" value="hembra">
+              <label for="hembra">Hembra</label>
+            </div>
+            <div class="opcion-radio">
+              <input type="radio" id="desconocido" formControlName="sexo" value="desconocido">
+              <label for="desconocido">No lo sé</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección de características -->
+      <div class="seccion">
+        <h2>Características</h2>
+
+        <div class="campo">
+          <label for="color_principal">Color principal</label>
+          <input type="text" id="color_principal" formControlName="color_principal" placeholder="Ej: Marrón">
+      </div>
+
+        <div class="campo">
+          <label for="caracteristicas_especiales">Características especiales</label>
+          <textarea id="caracteristicas_especiales" formControlName="caracteristicas_especiales" rows="3"
+            placeholder="Ej: Tiene una mancha blanca en la pata derecha, lleva un collar rojo..."></textarea>
+      </div>
+      </div>
+
+      <!-- Sección de información de pérdida -->
+      <div class="seccion">
+        <h2>Información de Pérdida</h2>
+
+        <div class="campo">
+          <label for="fecha_perdida">Fecha de pérdida</label>
+          <input type="date" id="fecha_perdida" formControlName="fecha_perdida">
+          <div class="error-mensaje" *ngIf="formularioMascota.get('fecha_perdida')?.invalid && formularioMascota.get('fecha_perdida')?.touched">
+            Por favor ingresa la fecha de pérdida
+        </div>
+      </div>
+
+        <div class="campo">
+          <label for="lugar_perdida">Lugar de pérdida</label>
+          <input type="text" id="lugar_perdida" formControlName="lugar_perdida" placeholder="Ej: Parque Central, Avenida Principal...">
+          <div class="error-mensaje" *ngIf="formularioMascota.get('lugar_perdida')?.invalid && formularioMascota.get('lugar_perdida')?.touched">
+            Por favor ingresa el lugar donde se perdió tu mascota
+          </div>
+        </div>
+
+        <div class="campo">
+          <label for="ultima_vez">Última vez visto</label>
+          <textarea id="ultima_vez" formControlName="ultima_vez" rows="2"
+            placeholder="Ej: Lo vi por última vez cuando salió corriendo hacia el parque..."></textarea>
+        </div>
+      </div>
+
+      <!-- Sección de imágenes -->
+      <div class="seccion">
+        <h2>Imágenes</h2>
+
+        <div class="campo">
+          <label>Sube fotos de tu mascota (máximo 3)</label>
+          <div class="subir-imagenes">
+            <div class="imagen-upload" (click)="triggerFileInput()" [class.tiene-imagen]="imagenPreview">
+              <input type="file" hidden #fileInput accept="image/*" (change)="onImageSelected($event)">
+              <div class="imagen-contenedor" *ngIf="imagenPreview; else noImagen">
+                <img [src]="imagenPreview">
+                <button type="button" class="eliminar-imagen" (click)="eliminarImagen($event)">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <ng-template #noImagen>
+                <div class="upload-placeholder">
+                  <i class="fas fa-cloud-upload-alt"></i>
+                  <span>Haz clic para subir</span>
+                </div>
+              </ng-template>
+            </div>
+
+            <!-- Puedes replicar el bloque anterior para permitir subir más imágenes -->
+          </div>
+          <p class="ayuda-texto">Las imágenes claras ayudarán a que otros reconozcan a tu mascota</p>
+        </div>
+      </div>
+
+      <!-- Sección de contacto -->
+      <div class="seccion">
+        <h2>Información de Contacto</h2>
+
+        <div class="campo">
+          <label for="telefono">Teléfono</label>
+          <input type="tel" id="telefono" formControlName="telefono" placeholder="Ej: 123-456-7890">
+          <div class="error-mensaje" *ngIf="formularioMascota.get('telefono')?.invalid && formularioMascota.get('telefono')?.touched">
+            Por favor ingresa un número de teléfono válido
+          </div>
+        </div>
+
+        <div class="campo">
+          <label for="notas_adicionales">Notas adicionales</label>
+          <textarea id="notas_adicionales" formControlName="notas_adicionales" rows="3"
+            placeholder="Información adicional que quieras compartir..."></textarea>
+        </div>
+      </div>
+
+      <div class="seccion-botones">
+        <button type="button" class="boton-cancelar" (click)="volver()">Cancelar</button>
+        <button type="submit" class="boton-publicar" [disabled]="formularioMascota.invalid">Publicar</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,216 @@
+<button class="boton-volver" type="button" (click)="cancelar()">
+    <i class="fas fa-arrow-left"></i> Volver
+  </button>
+<div class="adopcion-container">
+  <div class="contenedor-formulario">
+    <div class="encabezado">
+      <h1>Publicar Mascota en Adopción</h1>
+      <p>Completa el formulario para encontrar un nuevo hogar para tu mascota</p>
+    </div>
+
+    <!-- Mensaje de éxito -->
+    <div class="alerta exito" *ngIf="enviado">
+      <i class="fas fa-check-circle"></i>
+      ¡Publicación creada con éxito! Redirigiendo al feed...
+    </div>
+
+    <!-- Formulario de adopción -->
+    <form [formGroup]="adopcionForm" (ngSubmit)="onSubmit()" *ngIf="!enviado">
+      <div class="seccion-formulario">
+        <h2><i class="fas fa-paw"></i> Información Básica</h2>
+
+        <div class="grid-2">
+          <div class="grupo-formulario">
+            <label for="nombre">Nombre de la mascota *</label>
+            <input type="text" id="nombre" formControlName="nombre" placeholder="Nombre de la mascota">
+            <div class="error-mensaje" *ngIf="campoNoValido('nombre')">
+              {{ getMensajeError('nombre') }}
+            </div>
+          </div>
+
+          <div class="grupo-formulario">
+            <label for="especie">Especie *</label>
+            <select id="especie" formControlName="especie">
+              <option value="">Selecciona una especie</option>
+              <option *ngFor="let especie of especies" [value]="especie">{{ especie }}</option>
+            </select>
+            <div class="error-mensaje" *ngIf="campoNoValido('especie')">
+              {{ getMensajeError('especie') }}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="grupo-formulario">
+            <label for="raza">Raza</label>
+            <input type="text" id="raza" formControlName="raza" placeholder="Raza (si es conocida)">
+            <div class="error-mensaje" *ngIf="campoNoValido('raza')">
+              {{ getMensajeError('raza') }}
+            </div>
+          </div>
+
+          <div class="grupo-formulario">
+            <label for="edad">Edad aproximada *</label>
+            <select id="edad" formControlName="edad">
+              <option value="">Selecciona edad aproximada</option>
+              <option *ngFor="let edad of edades" [value]="edad">{{ edad }}</option>
+            </select>
+            <div class="error-mensaje" *ngIf="campoNoValido('edad')">
+              {{ getMensajeError('edad') }}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="grupo-formulario">
+            <label for="tamanio">Tamaño *</label>
+            <select id="tamanio" formControlName="tamanio">
+              <option value="">Selecciona tamaño</option>
+              <option *ngFor="let tamanio of tamanios" [value]="tamanio">{{ tamanio }}</option>
+            </select>
+            <div class="error-mensaje" *ngIf="campoNoValido('tamanio')">
+              {{ getMensajeError('tamanio') }}
+            </div>
+          </div>
+
+          <div class="grupo-formulario">
+            <label for="sexo">Sexo *</label>
+            <select id="sexo" formControlName="sexo">
+              <option value="">Selecciona sexo</option>
+              <option *ngFor="let sexo of sexos" [value]="sexo">{{ sexo }}</option>
+            </select>
+            <div class="error-mensaje" *ngIf="campoNoValido('sexo')">
+              {{ getMensajeError('sexo') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="seccion-formulario">
+        <h2><i class="fas fa-camera"></i> Fotografía</h2>
+
+
+
+        <div class="grupo-formulario imagen-upload">
+          <div class="area-carga"
+              [class.con-imagen]="imagenSeleccionada"
+              [class.error]="error"
+              (click)="!imagenSeleccionada && fileInput.click()">
+            <input #fileInput type="file" accept="image/*" (change)="onImagenSeleccionada($event)" hidden>
+            <ng-container *ngIf="imagenSeleccionada; else subirImagen">
+              <img [src]="imagenSeleccionada" alt="Imagen seleccionada" class="preview-imagen">
+            </ng-container>
+            <ng-template #subirImagen>
+              <span>Haz clic para subir imagen</span>
+            </ng-template>
+        </div>
+
+        <!-- Botón de eliminar imagen fuera del área de imagen -->
+        <div *ngIf="imagenSeleccionada" class="boton-otra-imagen">
+          <button type="button" (click)="eliminarImagen()">Seleccionar otra imagen</button>
+        </div>
+
+  <div class="error-mensaje" *ngIf="error">
+    {{ error }}
+  </div>
+  <p class="texto-ayuda">Sube una imagen clara de la mascota. Máximo 5MB.</p>
+</div>
+
+
+
+      </div>
+
+      <div class="seccion-formulario">
+        <h2><i class="fas fa-info-circle"></i> Detalles Adicionales</h2>
+
+        <div class="grupo-formulario">
+          <label for="descripcion">Descripción *</label>
+          <textarea id="descripcion" formControlName="descripcion" rows="4"
+                    placeholder="Describe la personalidad, comportamiento y por qué está en adopción"></textarea>
+          <div class="error-mensaje" *ngIf="campoNoValido('descripcion')">
+            {{ getMensajeError('descripcion') }}
+          </div>
+        </div>
+
+        <div class="grupo-formulario">
+          <label for="ubicacion">Ubicación *</label>
+          <input type="text" id="ubicacion" formControlName="ubicacion" placeholder="Ciudad, Estado o Región">
+          <div class="error-mensaje" *ngIf="campoNoValido('ubicacion')">
+            {{ getMensajeError('ubicacion') }}
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="grupo-formulario checkbox">
+            <input type="checkbox" id="vacunado" formControlName="vacunado">
+            <label for="vacunado">Vacunado</label>
+          </div>
+
+          <div class="grupo-formulario checkbox">
+            <input type="checkbox" id="esterilizado" formControlName="esterilizado">
+            <label for="esterilizado">Esterilizado</label>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="grupo-formulario checkbox">
+            <input type="checkbox" id="amigableConMascotas" formControlName="amigableConMascotas">
+            <label for="amigableConMascotas">Amigable con otras mascotas</label>
+          </div>
+
+          <div class="grupo-formulario checkbox">
+            <input type="checkbox" id="amigableConNinos" formControlName="amigableConNinos">
+            <label for="amigableConNinos">Amigable con niños</label>
+          </div>
+        </div>
+
+        <div class="grupo-formulario">
+          <label for="necesidadesEspeciales">Necesidades especiales</label>
+          <textarea id="necesidadesEspeciales" formControlName="necesidadesEspeciales" rows="3"
+                    placeholder="Condiciones médicas, necesidades de dieta, u otras consideraciones especiales (opcional)"></textarea>
+          <div class="error-mensaje" *ngIf="campoNoValido('necesidadesEspeciales')">
+            {{ getMensajeError('necesidadesEspeciales') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="seccion-formulario">
+        <h2><i class="fas fa-user"></i> Información de Contacto</h2>
+
+        <div class="grupo-formulario">
+          <label for="contactoNombre">Nombre completo *</label>
+          <input type="text" id="contactoNombre" formControlName="contactoNombre" placeholder="Tu nombre completo">
+          <div class="error-mensaje" *ngIf="campoNoValido('contactoNombre')">
+            {{ getMensajeError('contactoNombre') }}
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="grupo-formulario">
+            <label for="contactoEmail">Correo electrónico *</label>
+            <input type="email" id="contactoEmail" formControlName="contactoEmail" placeholder="tucorreo@ejemplo.com">
+            <div class="error-mensaje" *ngIf="campoNoValido('contactoEmail')">
+              {{ getMensajeError('contactoEmail') }}
+            </div>
+          </div>
+
+          <div class="grupo-formulario">
+            <label for="contactoTelefono">Teléfono *</label>
+            <input type="tel" id="contactoTelefono" formControlName="contactoTelefono" placeholder="10 dígitos">
+            <div class="error-mensaje" *ngIf="campoNoValido('contactoTelefono')">
+              {{ getMensajeError('contactoTelefono') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="acciones-formulario">
+        <button type="button" class="boton-secundario" (click)="cancelar()">Cancelar</button>
+        <button type="submit" class="boton-primario" [disabled]="enviando">
+          <span *ngIf="!enviando">Publicar</span>
+          <span *ngIf="enviando"><i class="fas fa-spinner fa-spin"></i> Publicando...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
