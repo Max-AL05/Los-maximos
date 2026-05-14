@@ -34,13 +34,11 @@ HEALTHCHECK --interval=20s --timeout=5s --start-period=15s --retries=3 \
 #   2) collectstatic (para gunicorn + STATIC_ROOT)
 #   3) levanta gRPC server en background
 #   4) levanta gunicorn en foreground (4 workers — ajustar según CPU)
-CMD ["sh", "-c", "\
+ENV PYTHONPATH="/app:/app/protos"
+
+CMD python -m grpc_tools.protoc -I../proto --python_out=./protos --grpc_python_out=./protos ../proto/*.proto && \
+    sed -i 's/import \(.*_pb2\) as/from . import \1 as/g' protos/*_pb2_grpc.py && \
     python manage.py migrate --noinput && \
     python manage.py collectstatic --noinput && \
     python -m grpc_server.server & \
-    gunicorn config.wsgi:application \
-        --bind 0.0.0.0:8004 \
-        --workers ${GUNICORN_WORKERS:-4} \
-        --access-logfile - \
-        --error-logfile - \
-"]
+    python manage.py runserver 0.0.0.0:8004
