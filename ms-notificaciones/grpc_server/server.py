@@ -3,6 +3,10 @@ Servidor gRPC de ms-notificaciones.
 
 Se ejecuta como proceso separado al servidor REST de Django
 (ver Dockerfile / docker-compose.yml).
+
+NOTA: Este archivo está listo para activarse cuando ya hayas generado los
+stubs gRPC desde proto/notificaciones.proto con generate_protos.sh.
+Por ahora solo levanta un servidor vacío para que el contenedor no falle.
 """
 import os
 import sys
@@ -19,16 +23,18 @@ django.setup()
 
 from django.conf import settings  # noqa: E402
 
-# TODO: Importar el servicer correspondiente desde grpc_server.services
-# from grpc_server.services import MyServicer
-# from protos import <ms>_pb2_grpc
+# TODO (cuando tengas los stubs generados):
+# from grpc_server.services import NotificacionesServicer
+# from protos import notificaciones_pb2_grpc
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
-    # TODO: Registrar servicers
-    # <ms>_pb2_grpc.add_<MS>ServiceServicer_to_server(MyServicer(), server)
+    # TODO: Registrar el servicer cuando tengas los stubs
+    # notificaciones_pb2_grpc.add_NotificacionesServiceServicer_to_server(
+    #     NotificacionesServicer(), server
+    # )
 
     port = settings.GRPC_PORT
     server.add_insecure_port(f"[::]:{port}")

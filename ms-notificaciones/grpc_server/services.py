@@ -1,13 +1,11 @@
 """
 Servicers gRPC de MS-6 Notificaciones.
 
-Implementan los métodos del contrato notificaciones.proto:
-    - SendBienvenida
-    - SendBajaNotif
-    - SendCierreMateria
-    - SendResetPassword
-
+Implementan los métodos del contrato proto/notificaciones.proto.
 Reutilizan apps.notificaciones.services (misma lógica que REST).
+
+Activar cuando hayas generado los stubs con:
+    bash scripts/generate_protos.sh
 """
 # from protos import notificaciones_pb2, notificaciones_pb2_grpc
 # from apps.notificaciones import services
@@ -17,7 +15,10 @@ Reutilizan apps.notificaciones.services (misma lógica que REST).
 #     def SendBienvenida(self, request, context):
 #         notif = services.enviar_bienvenida(
 #             alumno_id=request.alumno_id,
+#             alumno_email=request.alumno_email,
+#             alumno_nombre=request.alumno_nombre,
 #             materia_id=request.materia_id,
+#             materia_nombre=request.materia_nombre,
 #             clave_unica=request.clave_unica,
 #         )
 #         return notificaciones_pb2.SendResponse(
@@ -27,19 +28,13 @@ Reutilizan apps.notificaciones.services (misma lógica que REST).
 #         )
 #
 #     def SendBajaNotif(self, request, context):
-#         notif = services.enviar_baja(
-#             alumno_id=request.alumno_id,
-#             docente_id=request.docente_id,
-#             materia_id=request.materia_id,
-#         )
+#         notif = services.enviar_baja(...)
 #         return notificaciones_pb2.SendResponse(success=notif.estado == "ENVIADO")
 #
 #     def SendCierreMateria(self, request, context):
-#         services.enviar_cierre_materia(materia_id=request.materia_id)
+#         services.enviar_cierre_materia(...)
 #         return notificaciones_pb2.SendResponse(success=True)
 #
 #     def SendResetPassword(self, request, context):
-#         notif = services.enviar_reset_password(
-#             user_id=request.user_id, reset_link=request.reset_link,
-#         )
+#         notif = services.enviar_reset_password(...)
 #         return notificaciones_pb2.SendResponse(success=notif.estado == "ENVIADO")

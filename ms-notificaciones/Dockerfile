@@ -17,11 +17,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY . .
 
-# Generar código gRPC desde los .proto montados
+# Carpeta vacía para los stubs gRPC que se generen luego
 RUN mkdir -p protos && touch protos/__init__.py
 
 EXPOSE 8006 50056
 
-# El entrypoint levanta REST (gunicorn/runserver) y gRPC en paralelo.
-# Ajustar en producción: usar gunicorn + un proceso supervisor (honcho/supervisord).
-CMD ["sh", "-c", "python manage.py migrate --noinput && (python -m grpc_server.server &) && python manage.py runserver 0.0.0.0:8006"]
+# Migraciones + REST en 8006. El gRPC se activa cuando descomentes en server.py
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8006"]

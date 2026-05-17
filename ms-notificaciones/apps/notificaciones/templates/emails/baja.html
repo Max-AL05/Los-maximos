@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>Baja de alumno</title></head>
+<body style="font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px;">
+  <table align="center" width="600" cellpadding="0" cellspacing="0"
+         style="background:#ffffff; border-radius:8px; overflow:hidden;">
+    <tr>
+      <td style="background:#a83232; color:#fff; padding:20px; text-align:center;">
+        <h1 style="margin:0;">Aviso de baja</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:30px; color:#333;">
+        <p>Estimado(a) Profesor(a) <strong>{{ docente_nombre }}</strong>,</p>
+        <p>Le informamos que el siguiente alumno se ha dado de baja
+           de su materia:</p>
+        <table cellpadding="8" style="width:100%; background:#fafafa;
+                                       border:1px solid #ddd;">
+          <tr><td><strong>Alumno:</strong></td><td>{{ alumno_nombre }}</td></tr>
+          <tr><td><strong>Materia:</strong></td><td>{{ materia_nombre }}</td></tr>
+          <tr><td><strong>Motivo:</strong></td><td>{{ motivo }}</td></tr>
+          <tr><td><strong>Fecha:</strong></td><td>{{ fecha }}</td></tr>
+        </table>
+        <p style="margin-top:20px;">El alumno ha sido removido automáticamente
+           de su lista de asistencias y calificaciones.</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#f0f0f0; padding:15px; font-size:12px;
+                 color:#777; text-align:center;">
+        Sistema AGM – BUAP
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
