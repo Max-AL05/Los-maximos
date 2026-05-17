@@ -3,11 +3,19 @@ syntax = "proto3";
 package calificaciones;
 
 // Servicio gRPC del MS-4 Calificaciones & Ponderaciones
+// Este servicio provee datos calculados a otros microservicios (como MS-7 Reportes)
 service CalificacionesService {
-  rpc GetConcentrado(GetConcentradoRequest) returns (ConcentradoResponse);
-  rpc GetPromedioAlumno(GetPromedioAlumnoRequest) returns (PromedioResponse);
-  rpc GetEstadisticasMateria(GetEstadisticasMateriaRequest) returns (EstadisticasMateria);
+  // Obtiene el listado completo de notas de una materia
+  rpc GetConcentrado(GetConcentradoRequest) returns (GetConcentradoResponse);
+  
+  // Obtiene el promedio específico de un estudiante
+  rpc GetPromedioAlumno(GetPromedioAlumnoRequest) returns (GetPromedioAlumnoResponse);
+  
+  // Obtiene métricas generales de rendimiento para una materia
+  rpc GetEstadisticasMateria(GetEstadisticasMateriaRequest) returns (GetEstadisticasMateriaResponse);
 }
+
+// --- Mensajes para GetConcentrado ---
 
 message GetConcentradoRequest {
   string materia_id = 1;
@@ -19,33 +27,41 @@ message AlumnoCalif {
   string nombre_completo = 3;
   float promedio_real = 4;
   int32 promedio_redondeado = 5;
-  string estado = 6;       // APROBADO | REPROBADO | EN_CURSO
+  // Valores esperados: APROBADO | REPROBADO | EN_RIESGO
+  string estatus = 6; 
 }
 
-message ConcentradoResponse {
+message GetConcentradoResponse {
   repeated AlumnoCalif alumnos = 1;
 }
+
+// --- Mensajes para GetPromedioAlumno ---
 
 message GetPromedioAlumnoRequest {
   string alumno_id = 1;
   string materia_id = 2;
 }
 
-message PromedioResponse {
-  float promedio_real = 1;
-  int32 promedio_redondeado = 2;
+message GetPromedioAlumnoResponse {
+  string alumno_id = 1;
+  string materia_id = 2;
+  float promedio_real = 3;
+  int32 promedio_redondeado = 4;
 }
+
+// --- Mensajes para GetEstadisticasMateria ---
 
 message GetEstadisticasMateriaRequest {
   string materia_id = 1;
 }
 
-message EstadisticasMateria {
+message GetEstadisticasMateriaResponse {
   string materia_id = 1;
   int32 total_alumnos = 2;
   int32 aprobados = 3;
   int32 reprobados = 4;
-  float promedio_grupal = 5;
-  float calificacion_maxima = 6;
-  float calificacion_minima = 7;
+  int32 en_riesgo = 5;
+  float promedio_grupal = 6;
+  float calificacion_maxima = 7;
+  float calificacion_minima = 8;
 }

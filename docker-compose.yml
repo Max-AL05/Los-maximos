@@ -1,221 +1,193 @@
-services:
+# =============================================================================
+# AGM · Orquestación completa de Microservicios (Versión Unificada)
+# =============================================================================
+# Uso:
+#   docker compose up --build               # Construye y levanta todo
+#   docker compose down -v                  # Detiene todo y borra volúmenes
+# =============================================================================
 
-  # ─── Bases de datos ───────────────────────────────────────────────
+services:
+  # ──────────── BASES DE DATOS (Una por Microservicio) ────────────
   db-auth:
     image: postgres:16-alpine
-    container_name: db-auth
     environment:
-      POSTGRES_DB:       agm_auth_db
-      POSTGRES_USER:     agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - db_auth_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_auth_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      POSTGRES_DB: agm_auth_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-auth:/var/lib/postgresql/data]
+    networks: [agm-net]
 
   db-periodos:
     image: postgres:16-alpine
-    container_name: db-periodos
     environment:
-      POSTGRES_DB:       agm_periodos_db
-      POSTGRES_USER:     agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - db_periodos_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_periodos_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      POSTGRES_DB: agm_periodos_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-periodos:/var/lib/postgresql/data]
+    networks: [agm-net]
 
   db-alumnos:
     image: postgres:16-alpine
-    container_name: db-alumnos
     environment:
-      POSTGRES_DB:       agm_alumnos_db
-      POSTGRES_USER:     agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - db_alumnos_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_alumnos_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      POSTGRES_DB: agm_alumnos_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-alumnos:/var/lib/postgresql/data]
+    networks: [agm-net]
 
   db-calificaciones:
     image: postgres:16-alpine
-    container_name: db-calificaciones
     environment:
-      POSTGRES_DB:       agm_calif_db
-      POSTGRES_USER:     agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - db_calificaciones_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_calif_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      POSTGRES_DB: agm_calif_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-calificaciones:/var/lib/postgresql/data]
+    networks: [agm-net]
 
   db-asistencias:
     image: postgres:16-alpine
-    container_name: db-asistencias
     environment:
-      POSTGRES_DB:       agm_asistencias_db
-      POSTGRES_USER:     agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - db_asistencias_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_asistencias_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      POSTGRES_DB: agm_asistencias_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-asistencias:/var/lib/postgresql/data]
+    networks: [agm-net]
 
   db-notificaciones:
     image: postgres:16-alpine
-    container_name: db-notificaciones
     environment:
-      POSTGRES_DB:       agm_notif_db
-      POSTGRES_USER:     agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - db_notificaciones_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_notif_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      POSTGRES_DB: agm_notif_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-notificaciones:/var/lib/postgresql/data]
+    networks: [agm-net]
 
   db-reportes:
     image: postgres:16-alpine
-    container_name: db-reportes
     environment:
-      POSTGRES_DB:       agm_reportes_db
-      POSTGRES_USER:     agm_user
-      POSTGRES_PASSWORD: agm_password
-    volumes:
-      - db_reportes_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_reportes_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      POSTGRES_DB: agm_reportes_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [data-reportes:/var/lib/postgresql/data]
+    networks: [agm-net]
 
-  # ─── Microservicios ───────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    networks: [agm-net]
+
+  # ──────────── MICROSERVICIOS ────────────
+
   ms-auth:
     build: ./ms-auth
-    container_name: ms-auth
     env_file: ./ms-auth/.env
+    environment:
+      DB_HOST: db-auth
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on: [db-auth]
     ports:
       - "8001:8001"
       - "50051:50051"
-    depends_on:
-      db-auth:
-        condition: service_healthy
-    restart: on-failure
+    networks: [agm-net]
 
   ms-periodos:
     build: ./ms-periodos
-    container_name: ms-periodos
     env_file: ./ms-periodos/.env
+    environment:
+      DB_HOST: db-periodos
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on: [db-periodos, ms-auth]
     ports:
       - "8002:8002"
       - "50052:50052"
-    depends_on:
-      db-periodos:
-        condition: service_healthy
-      ms-auth:
-        condition: service_started
-    restart: on-failure
+    networks: [agm-net]
 
   ms-alumnos:
     build: ./ms-alumnos
-    container_name: ms-alumnos
     env_file: ./ms-alumnos/.env
+    environment:
+      DB_HOST: db-alumnos
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on: [db-alumnos, ms-auth]
     ports:
       - "8003:8003"
       - "50053:50053"
-    depends_on:
-      db-alumnos:
-        condition: service_healthy
-      ms-auth:
-        condition: service_started
-    restart: on-failure
+    networks: [agm-net]
 
   ms-calificaciones:
     build: ./ms-calificaciones
-    container_name: ms-calificaciones
     env_file: ./ms-calificaciones/.env
+    environment:
+      DB_HOST: db-calificaciones
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # URLs gRPC usando nombres de servicio como hostnames
+      GRPC_AUTH_URL: ms-auth:50051
+      GRPC_ALUMNOS_URL: ms-alumnos:50053
+    depends_on: [db-calificaciones, ms-auth, ms-alumnos]
     ports:
       - "8004:8004"
       - "50054:50054"
-    depends_on:
-      db-calificaciones:
-        condition: service_healthy
-      ms-auth:
-        condition: service_started
-    restart: on-failure
+    networks: [agm-net]
 
   ms-asistencias:
     build: ./ms-asistencias
-    container_name: ms-asistencias
     env_file: ./ms-asistencias/.env
+    environment:
+      DB_HOST: db-asistencias
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: redis://redis:6379/0
+      # URLs gRPC para validación de tokens y alumnos
+      GRPC_AUTH_URL: ms-auth:50051
+      GRPC_ALUMNOS_URL: ms-alumnos:50053
+    depends_on: [db-asistencias, redis, ms-auth, ms-alumnos]
     ports:
       - "8005:8005"
       - "50055:50055"
-    depends_on:
-      db-asistencias:
-        condition: service_healthy
-      ms-auth:
-        condition: service_started
-    restart: on-failure
+    networks: [agm-net]
 
   ms-notificaciones:
     build: ./ms-notificaciones
-    container_name: ms-notificaciones
     env_file: ./ms-notificaciones/.env
+    environment:
+      DB_HOST: db-notificaciones
+    depends_on: [db-notificaciones, ms-auth]
     ports:
       - "8006:8006"
       - "50056:50056"
-    depends_on:
-      db-notificaciones:
-        condition: service_healthy
-      ms-auth:
-        condition: service_started
-    restart: on-failure
+    networks: [agm-net]
 
   ms-reportes:
     build: ./ms-reportes
-    container_name: ms-reportes
     env_file: ./ms-reportes/.env
+    environment:
+      DB_HOST: db-reportes
+      # Referencias a otros MS para agregación de datos
+      GRPC_AUTH_URL: ms-auth:50051
+      GRPC_PERIODOS_URL: ms-periodos:50052
+      GRPC_ALUMNOS_URL: ms-alumnos:50053
+      GRPC_CALIF_URL: ms-calificaciones:50054
+      GRPC_ASIST_URL: ms-asistencias:50055
+    depends_on:
+      - db-reportes
+      - ms-auth
+      - ms-periodos
+      - ms-alumnos
+      - ms-calificaciones
+      - ms-asistencias
     ports:
       - "8007:8007"
       - "50057:50057"
-    depends_on:
-      db-reportes:
-        condition: service_healthy
-      ms-auth:
-        condition: service_started
-      ms-periodos:
-        condition: service_started
-      ms-alumnos:
-        condition: service_started
-      ms-calificaciones:
-        condition: service_started
-      ms-asistencias:
-        condition: service_started
-    restart: on-failure
+    networks: [agm-net]
+
+networks:
+  agm-net:
+    driver: bridge
 
 volumes:
-  db_auth_data:
-  db_periodos_data:
-  db_alumnos_data:
-  db_calificaciones_data:
-  db_asistencias_data:
-  db_notificaciones_data:
-  db_reportes_data:
+  data-auth:
+  data-periodos:
+  data-alumnos:
+  data-calificaciones:
+  data-asistencias:
+  data-notificaciones:
+  data-reportes:
