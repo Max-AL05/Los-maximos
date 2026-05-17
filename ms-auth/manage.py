@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-"""Django manage.py para ms-auth."""
 import os
 import sys
 
