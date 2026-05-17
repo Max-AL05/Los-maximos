@@ -50,6 +50,7 @@ class Notificacion(models.Model):
 
     class Meta:
         db_table = "notificaciones"
+        ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["tipo", "estado"]),
             models.Index(fields=["destinatario_email"]),

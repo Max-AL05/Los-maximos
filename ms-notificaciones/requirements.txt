@@ -9,5 +9,3 @@ grpcio==1.68.0
 grpcio-tools==1.68.0
 protobuf==5.28.3
 gunicorn==23.0.0
-# Envío de correos – Django ya trae backend SMTP nativo, esto es para HTML templating avanzado
-Jinja2==3.1.4

@@ -1,0 +1,164 @@
+{
+  "info": {
+    "name": "AGM - MS-6 Notificaciones",
+    "description": "Coleccion para probar el microservicio de notificaciones (MS-6).\n\nFlujo recomendado:\n1. Health Check\n2. Bienvenida\n3. Baja\n4. Cierre Materia (envio masivo)\n5. Reset Password\n6. Listar notificaciones (auditoria)\n7. Ver detalle por ID\n\nNota: en desarrollo el EMAIL_BACKEND es 'console', asi que los correos NO se envian de verdad: aparecen impresos en la terminal donde corre Django.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8006",
+      "type": "string"
+    },
+    {
+      "key": "notificacionId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/health/", "host": ["{{baseUrl}}"], "path": ["health", ""] }
+      },
+      "response": []
+    },
+    {
+      "name": "1. Enviar Bienvenida",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.test('Estado ENVIADO', () => pm.expect(json.estado).to.eql('ENVIADO'));",
+              "pm.collectionVariables.set('notificacionId', json.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"alumno_email\": \"juan.perez@alumno.buap.mx\",\n  \"alumno_nombre\": \"Juan Perez\",\n  \"materia_nombre\": \"Servicios Web\",\n  \"clave_unica\": \"ABC123XYZ\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/notificaciones/bienvenida",
+          "host": ["{{baseUrl}}"],
+          "path": ["notificaciones", "bienvenida"]
+        }
+      }
+    },
+    {
+      "name": "2. Notificar Baja al Docente",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"alumno_nombre\": \"Juan Perez\",\n  \"docente_email\": \"prof.lopez@buap.mx\",\n  \"docente_nombre\": \"Maria Lopez\",\n  \"materia_nombre\": \"Servicios Web\",\n  \"motivo\": \"Cambio de carrera\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/notificaciones/baja",
+          "host": ["{{baseUrl}}"],
+          "path": ["notificaciones", "baja"]
+        }
+      }
+    },
+    {
+      "name": "3. Cierre de Materia (envio masivo)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"materia_nombre\": \"Servicios Web\",\n  \"periodo\": \"Primavera 2026\",\n  \"alumnos\": [\n    { \"email\": \"alumno1@buap.mx\", \"nombre\": \"Ana Garcia\", \"calificacion_final\": 9.5 },\n    { \"email\": \"alumno2@buap.mx\", \"nombre\": \"Luis Martinez\", \"calificacion_final\": 8.7 },\n    { \"email\": \"alumno3@buap.mx\", \"nombre\": \"Sofia Ramirez\", \"calificacion_final\": 7.3 }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/notificaciones/cierre-materia",
+          "host": ["{{baseUrl}}"],
+          "path": ["notificaciones", "cierre-materia"]
+        }
+      }
+    },
+    {
+      "name": "4. Reset de Contrasena",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_email\": \"juan.perez@alumno.buap.mx\",\n  \"user_nombre\": \"Juan Perez\",\n  \"reset_link\": \"https://agm.buap.mx/reset?token=abc123def456\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/notificaciones/reset-password",
+          "host": ["{{baseUrl}}"],
+          "path": ["notificaciones", "reset-password"]
+        }
+      }
+    },
+    {
+      "name": "5. Listar Notificaciones",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/notificaciones/",
+          "host": ["{{baseUrl}}"],
+          "path": ["notificaciones", ""]
+        }
+      }
+    },
+    {
+      "name": "5b. Listar filtrado (tipo=BIENVENIDA estado=ENVIADO)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/notificaciones/?tipo=BIENVENIDA&estado=ENVIADO",
+          "host": ["{{baseUrl}}"],
+          "path": ["notificaciones", ""],
+          "query": [
+            { "key": "tipo", "value": "BIENVENIDA" },
+            { "key": "estado", "value": "ENVIADO" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Ver detalle por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/notificaciones/{{notificacionId}}/",
+          "host": ["{{baseUrl}}"],
+          "path": ["notificaciones", "{{notificacionId}}", ""]
+        }
+      }
+    },
+    {
+      "name": "Validacion: body invalido (debe dar 400)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"alumno_email\": \"esto-no-es-email\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/notificaciones/bienvenida",
+          "host": ["{{baseUrl}}"],
+          "path": ["notificaciones", "bienvenida"]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>Bienvenido a AGM</title></head>
+<body style="font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px;">
+  <table align="center" width="600" cellpadding="0" cellspacing="0"
+         style="background:#ffffff; border-radius:8px; overflow:hidden;">
+    <tr>
+      <td style="background:#1f3b73; color:#fff; padding:20px; text-align:center;">
+        <h1 style="margin:0;">AGM – BUAP</h1>
+        <p style="margin:0;">Sistema de Gestión y Automatización de Calificaciones</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:30px; color:#333;">
+        <h2>¡Bienvenido(a), {{ alumno_nombre }}!</h2>
+        <p>Has sido inscrito(a) en la materia
+           <strong>{{ materia_nombre }}</strong>.</p>
+        <p>Tu <strong>clave única</strong> para el registro de asistencias QR es:</p>
+        <div style="background:#f0f4ff; border-left:4px solid #1f3b73;
+                    padding:15px; font-size:20px; font-family:monospace;
+                    text-align:center; letter-spacing:2px;">
+          {{ clave_unica }}
+        </div>
+        <p style="margin-top:20px;">Guarda esta clave en un lugar seguro.
+           La necesitarás para autenticarte al escanear el código QR del docente.</p>
+        <p>¡Mucho éxito en el curso!</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#f0f0f0; padding:15px; font-size:12px;
+                 color:#777; text-align:center;">
+        Este correo fue enviado automáticamente. No respondas a esta dirección.<br>
+        Facultad de Ciencias de la Computación – BUAP
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

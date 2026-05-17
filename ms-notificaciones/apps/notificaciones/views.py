@@ -1,64 +1,116 @@
-"""
-Endpoints:
-    POST /notificaciones/bienvenida
-    POST /notificaciones/baja
-    POST /notificaciones/cierre-materia
-    POST /notificaciones/reset-password
-"""
+
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from . import services
+from .models import Notificacion
 from .serializers import (
     BienvenidaSerializer,
     BajaSerializer,
     CierreMateriaSerializer,
     ResetPasswordSerializer,
+    NotificacionSerializer,
 )
 
 
+# ============================================================================
+# POST /notificaciones/bienvenida
+# ============================================================================
+@extend_schema(
+    request=BienvenidaSerializer,
+    responses={201: NotificacionSerializer},
+    summary="Envía email de bienvenida con clave única",
+    tags=["Notificaciones"],
+)
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
 def bienvenida(request):
-    s = BienvenidaSerializer(data=request.data)
-    s.is_valid(raise_exception=True)
-    notif = services.enviar_bienvenida(**s.validated_data)
-    return Response(
-        {"success": notif.estado == "ENVIADO", "data": {"id": str(notif.id)}, "message": notif.error},
-        status=status.HTTP_201_CREATED,
-    )
+    serializer = BienvenidaSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    notif = services.enviar_bienvenida(**serializer.validated_data)
+    return Response(NotificacionSerializer(notif).data, status=status.HTTP_201_CREATED)
 
 
+# ============================================================================
+# POST /notificaciones/baja
+# ============================================================================
+@extend_schema(
+    request=BajaSerializer,
+    responses={201: NotificacionSerializer},
+    summary="Avisa al docente que un alumno se dio de baja",
+    tags=["Notificaciones"],
+)
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
 def baja(request):
-    s = BajaSerializer(data=request.data)
-    s.is_valid(raise_exception=True)
-    notif = services.enviar_baja(**s.validated_data)
-    return Response(
-        {"success": notif.estado == "ENVIADO", "data": {"id": str(notif.id)}, "message": notif.error},
-        status=status.HTTP_201_CREATED,
-    )
+    serializer = BajaSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    notif = services.enviar_baja(**serializer.validated_data)
+    return Response(NotificacionSerializer(notif).data, status=status.HTTP_201_CREATED)
 
 
+# ============================================================================
+# POST /notificaciones/cierre-materia
+# ============================================================================
+@extend_schema(
+    request=CierreMateriaSerializer,
+    responses={201: NotificacionSerializer(many=True)},
+    summary="Envío masivo a todos los alumnos al cerrar una materia",
+    tags=["Notificaciones"],
+)
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
 def cierre_materia(request):
-    s = CierreMateriaSerializer(data=request.data)
-    s.is_valid(raise_exception=True)
-    services.enviar_cierre_materia(**s.validated_data)
-    return Response({"success": True, "message": ""}, status=status.HTTP_201_CREATED)
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def reset_password(request):
-    s = ResetPasswordSerializer(data=request.data)
-    s.is_valid(raise_exception=True)
-    notif = services.enviar_reset_password(**s.validated_data)
+    serializer = CierreMateriaSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    notifs = services.enviar_cierre_materia(**serializer.validated_data)
     return Response(
-        {"success": notif.estado == "ENVIADO", "data": {"id": str(notif.id)}, "message": notif.error},
+        NotificacionSerializer(notifs, many=True).data,
         status=status.HTTP_201_CREATED,
     )
+
+
+# ============================================================================
+# POST /notificaciones/reset-password
+# ============================================================================
+@extend_schema(
+    request=ResetPasswordSerializer,
+    responses={201: NotificacionSerializer},
+    summary="Envía link de recuperación de contraseña",
+    tags=["Notificaciones"],
+)
+@api_view(["POST"])
+def reset_password(request):
+    serializer = ResetPasswordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    notif = services.enviar_reset_password(**serializer.validated_data)
+    return Response(NotificacionSerializer(notif).data, status=status.HTTP_201_CREATED)
+
+
+# ============================================================================
+# GET /notificaciones/  (lista con paginación implícita y filtros)
+# GET /notificaciones/<uuid:pk>/
+# ============================================================================
+class NotificacionListView(ListAPIView):
+    """Lista todas las notificaciones, con filtros opcionales por tipo/estado/email."""
+    serializer_class = NotificacionSerializer
+
+    def get_queryset(self):
+        qs = Notificacion.objects.all()
+        tipo = self.request.query_params.get("tipo")
+        estado = self.request.query_params.get("estado")
+        email = self.request.query_params.get("email")
+        if tipo:
+            qs = qs.filter(tipo=tipo)
+        if estado:
+            qs = qs.filter(estado=estado)
+        if email:
+            qs = qs.filter(destinatario_email__icontains=email)
+        return qs
+
+
+class NotificacionDetailView(RetrieveAPIView):
+    """Detalle de una notificación por UUID."""
+    queryset = Notificacion.objects.all()
+    serializer_class = NotificacionSerializer
+    lookup_field = "id"

@@ -6,6 +6,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 
 def health(_request):
+    """Health check para readiness/liveness probes."""
     return JsonResponse({"status": "ok", "service": "ms-notificaciones"})
 
 
@@ -15,6 +16,6 @@ urlpatterns = [
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("health/", health),
 
-    # API
+    # API REST de notificaciones
     path("notificaciones/", include("apps.notificaciones.urls")),
 ]
