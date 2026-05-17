@@ -1,15 +1,9 @@
-"""Modelos de Periodos académicos."""
 import uuid
 from django.db import models
 
 
 class Periodo(models.Model):
-    """
-    Periodo académico (semestre).
 
-    Solo puede haber un periodo activo a la vez (validar a nivel de servicio
-    o con una constraint condicional).
-    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nombre = models.CharField(max_length=100)              # ej. "Primavera 2026"
     fecha_inicio = models.DateField()
@@ -23,7 +17,6 @@ class Periodo(models.Model):
         db_table = "periodos"
         ordering = ["-fecha_inicio"]
         constraints = [
-            # Solo un periodo activo a la vez
             models.UniqueConstraint(
                 fields=["activo"],
                 condition=models.Q(activo=True),

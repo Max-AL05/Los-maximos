@@ -15,7 +15,7 @@ from apps.reportes.grpc_clients import (
     get_asistencia_alumno,
 )
 
-DEV_BYPASS_AUTH = True  # cambiar a False antes de entrega final
+DEV_BYPASS_AUTH = False  # cambiar a False antes de entrega final
 
 _perms = [AllowAny] if DEV_BYPASS_AUTH else [IsAuthenticated]
 

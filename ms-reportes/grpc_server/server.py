@@ -4,6 +4,7 @@ Se ejecuta como proceso separado al servidor REST de Django.
 """
 import os
 import sys
+import signal
 from concurrent import futures
 from pathlib import Path
 
@@ -30,6 +31,15 @@ def serve():
     server.add_insecure_port(f"[::]:{port}")
     server.start()
     print(f"[ms-reportes] gRPC server escuchando en :{port}")
+
+    # Cierre limpio con Ctrl+C o señal de Docker
+    def _stop(signum, frame):
+        print("[ms-reportes] Deteniendo gRPC server...")
+        server.stop(grace=5).wait()
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT,  _stop)
+
     server.wait_for_termination()
 
 

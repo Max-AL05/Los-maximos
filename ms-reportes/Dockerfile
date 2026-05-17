@@ -5,7 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Dependencias del sistema (psycopg2 necesita libpq-dev y build-essentials)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -17,11 +16,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY . .
 
-# Generar código gRPC desde los .proto montados
 RUN mkdir -p protos && touch protos/__init__.py
 
 EXPOSE 8007 50057
 
-# El entrypoint levanta REST (gunicorn/runserver) y gRPC en paralelo.
-# Ajustar en producción: usar gunicorn + un proceso supervisor (honcho/supervisord).
-CMD ["sh", "-c", "python manage.py migrate --noinput && (python -m grpc_server.server &) && python manage.py runserver 0.0.0.0:8007"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && (python -m grpc_server.server &) && gunicorn config.wsgi:application --bind 0.0.0.0:8007 --workers 2"]

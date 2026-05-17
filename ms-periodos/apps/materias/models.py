@@ -1,4 +1,3 @@
-"""Modelos de Materias."""
 import uuid
 from django.db import models
 
@@ -12,12 +11,7 @@ class EstadoMateria(models.TextChoices):
 
 
 class Materia(models.Model):
-    """
-    Materia/curso de un periodo académico.
 
-    El docente_id apunta al ID del usuario en MS-1 Auth (no se hace FK
-    porque están en bases de datos separadas).
-    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     periodo = models.ForeignKey(Periodo, on_delete=models.PROTECT, related_name="materias")
 
@@ -25,9 +19,7 @@ class Materia(models.Model):
     nombre = models.CharField(max_length=255)
     seccion = models.CharField(max_length=10)
     clave = models.CharField(max_length=20)
-    horario = models.CharField(max_length=255)            # ej. "Lun-Mié 10:00-12:00"
-
-    # ID del docente en MS-1 (UUID en string para evitar acoplamiento)
+    horario = models.CharField(max_length=255)            # Lun-Mié 10:00-12:00
     docente_id = models.CharField(max_length=64)
 
     estado = models.CharField(
