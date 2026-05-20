@@ -1,0 +1,283 @@
+# ─────────────────────────────────────────────────────────────────────
+#  Proyecto Final SW — AGM | Arquitectura de microservicios
+#  7 microservicios Django + 7 bases PostgreSQL + 1 Redis
+#  Comunicación interna: gRPC (puertos 5005x) usando el nombre de
+#  servicio como DNS dentro de la red 'agm-net'.
+# ─────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ─── Cache / anti-replay QR (solo lo usa ms-asistencias) ───────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks: [agm-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── Bases de datos ────────────────────────────────────────────────
+  db-auth:
+    image: postgres:16-alpine
+    container_name: db-auth
+    networks: [agm-net]
+    environment:
+      POSTGRES_DB:       agm_auth_db
+      POSTGRES_USER:     agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - db_auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-periodos:
+    image: postgres:16-alpine
+    container_name: db-periodos
+    networks: [agm-net]
+    environment:
+      POSTGRES_DB:       agm_periodos_db
+      POSTGRES_USER:     agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - db_periodos_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_periodos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-alumnos:
+    image: postgres:16-alpine
+    container_name: db-alumnos
+    networks: [agm-net]
+    environment:
+      POSTGRES_DB:       agm_alumnos_db
+      POSTGRES_USER:     agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - db_alumnos_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_alumnos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-calificaciones:
+    image: postgres:16-alpine
+    container_name: db-calificaciones
+    networks: [agm-net]
+    environment:
+      POSTGRES_DB:       agm_calif_db
+      POSTGRES_USER:     agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - db_calificaciones_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_calif_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-asistencias:
+    image: postgres:16-alpine
+    container_name: db-asistencias
+    networks: [agm-net]
+    environment:
+      POSTGRES_DB:       agm_asistencias_db
+      POSTGRES_USER:     agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - db_asistencias_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_asistencias_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-notificaciones:
+    image: postgres:16-alpine
+    container_name: db-notificaciones
+    networks: [agm-net]
+    environment:
+      POSTGRES_DB:       agm_notif_db
+      POSTGRES_USER:     agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - db_notificaciones_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_notif_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-reportes:
+    image: postgres:16-alpine
+    container_name: db-reportes
+    networks: [agm-net]
+    environment:
+      POSTGRES_DB:       agm_reportes_db
+      POSTGRES_USER:     agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - db_reportes_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_reportes_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Microservicios ────────────────────────────────────────────────
+
+  # MS-1 · Autenticación y usuarios. Emite los JWT que el resto valida.
+  ms-auth:
+    build: ./ms-auth
+    container_name: ms-auth
+    networks: [agm-net]
+    env_file: ./ms-auth/.env
+    ports:
+      - "8001:8001"
+      - "50051:50051"
+    depends_on:
+      db-auth:
+        condition: service_healthy
+    # Healthcheck real: el puerto REST 8001 debe estar aceptando conexiones.
+    # Así los servicios que dependen de ms-auth esperan a que esté LISTO,
+    # no solo a que el contenedor haya arrancado.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',8001),2)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: on-failure
+
+  # MS-2 · Periodos académicos y materias.
+  ms-periodos:
+    build: ./ms-periodos
+    container_name: ms-periodos
+    networks: [agm-net]
+    env_file: ./ms-periodos/.env
+    ports:
+      - "8002:8002"
+      - "50052:50052"
+    depends_on:
+      db-periodos:
+        condition: service_healthy
+      ms-auth:
+        condition: service_healthy
+    restart: on-failure
+
+  # MS-3 · Docentes y alumnos.
+  ms-alumnos:
+    build: ./ms-alumnos
+    container_name: ms-alumnos
+    networks: [agm-net]
+    env_file: ./ms-alumnos/.env
+    ports:
+      - "8003:8003"
+      - "50053:50053"
+    depends_on:
+      db-alumnos:
+        condition: service_healthy
+      ms-auth:
+        condition: service_healthy
+    restart: on-failure
+
+  # MS-4 · Calificaciones y ponderaciones. Cliente gRPC de ms-alumnos.
+  ms-calificaciones:
+    build: ./ms-calificaciones
+    container_name: ms-calificaciones
+    networks: [agm-net]
+    env_file: ./ms-calificaciones/.env
+    ports:
+      - "8004:8004"
+      - "50054:50054"
+    depends_on:
+      db-calificaciones:
+        condition: service_healthy
+      ms-auth:
+        condition: service_healthy
+      ms-alumnos:
+        condition: service_started
+    restart: on-failure
+
+  # MS-5 · Asistencias por QR. ÚNICO servicio que necesita Redis.
+  ms-asistencias:
+    build: ./ms-asistencias
+    container_name: ms-asistencias
+    networks: [agm-net]
+    env_file: ./ms-asistencias/.env
+    ports:
+      - "8005:8005"
+      - "50055:50055"
+    depends_on:
+      db-asistencias:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ms-auth:
+        condition: service_healthy
+    restart: on-failure
+
+  # MS-6 · Notificaciones por correo.
+  ms-notificaciones:
+    build: ./ms-notificaciones
+    container_name: ms-notificaciones
+    networks: [agm-net]
+    env_file: ./ms-notificaciones/.env
+    ports:
+      - "8006:8006"
+      - "50056:50056"
+    depends_on:
+      db-notificaciones:
+        condition: service_healthy
+      ms-auth:
+        condition: service_healthy
+    restart: on-failure
+
+  # MS-7 · Reportes y estadísticas. Cliente gRPC de periodos/alumnos/
+  # calificaciones/asistencias (hoy con USE_FALLBACK=True).
+  ms-reportes:
+    build: ./ms-reportes
+    container_name: ms-reportes
+    networks: [agm-net]
+    env_file: ./ms-reportes/.env
+    ports:
+      - "8007:8007"
+      - "50057:50057"
+    depends_on:
+      db-reportes:
+        condition: service_healthy
+      ms-auth:
+        condition: service_healthy
+      ms-periodos:
+        condition: service_started
+      ms-alumnos:
+        condition: service_started
+      ms-calificaciones:
+        condition: service_started
+      ms-asistencias:
+        condition: service_started
+    restart: on-failure
+
+# ─── Red compartida ──────────────────────────────────────────────────
+# Una sola red bridge para que todos los contenedores se resuelvan
+# entre sí por nombre (db-auth, ms-auth, redis, ...).
+networks:
+  agm-net:
+    driver: bridge
+
+# ─── Volúmenes persistentes ──────────────────────────────────────────
+volumes:
+  db_auth_data:
+  db_periodos_data:
+  db_alumnos_data:
+  db_calificaciones_data:
+  db_asistencias_data:
+  db_notificaciones_data:
+  db_reportes_data:
