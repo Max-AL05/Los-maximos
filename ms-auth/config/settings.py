@@ -18,7 +18,6 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
 
 
-# === Aplicaciones ===
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -27,13 +26,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Terceros
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
     "drf_spectacular",
 
-    # Apps locales
     "apps.users",
 ]
 
@@ -71,11 +68,10 @@ TEMPLATES = [
 ]
 
 
-# === Base de datos ===
 DATABASES = {
     "default": {
         "ENGINE": os.environ.get("DB_ENGINE", "django.db.backends.postgresql"),
-        "NAME": os.environ.get("DB_NAME", "agm_db"),
+        "NAME": os.environ.get("DB_NAME", "agm_auth_db"),
         "USER": os.environ.get("DB_USER", "agm_user"),
         "PASSWORD": os.environ.get("DB_PASSWORD", "agm_password"),
         "HOST": os.environ.get("DB_HOST", "localhost"),
@@ -92,7 +88,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# === i18n ===
 LANGUAGE_CODE = "es-mx"
 TIME_ZONE = "America/Mexico_City"
 USE_I18N = True
@@ -102,7 +97,6 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# === Django REST Framework ===
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -119,7 +113,6 @@ REST_FRAMEWORK = {
 }
 
 
-# === SimpleJWT ===
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.environ.get("JWT_ACCESS_TTL_MIN", 60))),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.environ.get("JWT_REFRESH_TTL_DAYS", 7))),
@@ -129,14 +122,16 @@ SIMPLE_JWT = {
 }
 
 
-# === CORS ===
 CORS_ALLOWED_ORIGINS = [
     o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
 
 
-# === gRPC (otros MS a los que este servicio puede llamar) ===
+# URL base del frontend (usada para generar el enlace de reset-password)
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
+
+
 GRPC_TARGETS = {
     "auth": os.environ.get("GRPC_AUTH_URL", "localhost:50051"),
     "periodos": os.environ.get("GRPC_PERIODOS_URL", "localhost:50052"),
@@ -149,10 +144,9 @@ GRPC_TARGETS = {
 GRPC_PORT = int(os.environ.get("GRPC_PORT", 50051))
 
 
-# === drf-spectacular (OpenAPI / Swagger) ===
 SPECTACULAR_SETTINGS = {
-    "TITLE": "AGM Microservicio",
-    "DESCRIPTION": "API REST del microservicio AGM",
+    "TITLE": "AGM – MS-1 Auth & Users",
+    "DESCRIPTION": "Autenticación JWT, gestión de credenciales y RBAC",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }

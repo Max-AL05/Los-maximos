@@ -1,8 +1,8 @@
 """
 Servidor gRPC de ms-auth.
 
-Se ejecuta como proceso separado al servidor REST de Django
-(ver Dockerfile / docker-compose.yml).
+Se ejecuta como proceso separado al servidor REST de Django.
+Ver Dockerfile / docker-compose.yml.
 """
 import os
 import sys
@@ -12,23 +12,18 @@ from pathlib import Path
 import django
 import grpc
 
-# Configurar Django ANTES de importar modelos
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-from django.conf import settings  # noqa: E402
-
-# TODO: Importar el servicer correspondiente desde grpc_server.services
-# from grpc_server.services import MyServicer
-# from protos import <ms>_pb2_grpc
+from django.conf import settings
+from grpc_server.services import AuthServicer
+from protos import auth_pb2_grpc
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-
-    # TODO: Registrar servicers
-    # <ms>_pb2_grpc.add_<MS>ServiceServicer_to_server(MyServicer(), server)
+    auth_pb2_grpc.add_AuthServiceServicer_to_server(AuthServicer(), server)
 
     port = settings.GRPC_PORT
     server.add_insecure_port(f"[::]:{port}")
