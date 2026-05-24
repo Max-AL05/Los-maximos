@@ -1,63 +1,94 @@
+"""
+Endpoints de Ponderaciones:
+    GET  /ponderaciones/<materia_id>    → lista las categorías
+    POST /ponderaciones/<materia_id>    → guarda la configuración completa (valida suma=100)
+    PUT  /ponderaciones/<materia_id>    → igual que POST (idempotente)
+"""
 from decimal import Decimal
+
 from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Ponderacion
 from .serializers import PonderacionSerializer
 
+
 @api_view(["GET", "POST", "PUT"])
-# @permission_classes([IsAuthenticated])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ponderaciones_view(request, materia_id):
-    """
-    Maneja la rúbrica de evaluación por materia.
-    """
+
     if request.method == "GET":
-        qs = Ponderacion.objects.filter(materia_id=materia_id)
+        qs = Ponderacion.objects.filter(materia_id=str(materia_id)).order_by("nombre")
         return Response({
-            "success": True, 
-            "data": PonderacionSerializer(qs, many=True).data
+            "success": True,
+            "data": PonderacionSerializer(qs, many=True).data,
+            "message": "",
         })
 
-    # Para POST y PUT esperamos una lista de objetos: [{"nombre": "Exámenes", "porcentaje": 60}, ...]
-    data = request.data if isinstance(request.data, list) else request.data.get("items", [])
-    
-    if not data:
-        return Response({"success": False, "message": "No se enviaron datos de ponderación."}, status=400)
+    # POST / PUT — recibir lista de { nombre, porcentaje }
+    items = request.data if isinstance(request.data, list) else request.data.get("items", [])
 
-    # Validación crítica: La suma debe ser exactamente 100.00
+    if not items:
+        return Response(
+            {"success": False, "data": None, "message": "Debes enviar al menos una ponderación"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Validar suma == 100
     try:
-        total_suma = sum(Decimal(str(item.get("porcentaje", 0))) for item in data)
+        total = sum(Decimal(str(i.get("porcentaje", 0))) for i in items)
     except Exception:
-        return Response({"success": False, "message": "Formato de porcentaje inválido."}, status=400)
+        return Response(
+            {"success": False, "data": None, "message": "Porcentajes inválidos"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    if total_suma != Decimal("100.00"):
-        return Response({
-            "success": False, 
-            "message": f"La suma de los criterios debe ser exactamente 100%. Recibido: {total_suma}%"
-        }, status=status.HTTP_400_BAD_REQUEST)
+    if total != Decimal("100"):
+        return Response(
+            {
+                "success": False,
+                "data": None,
+                "message": f"La suma de porcentajes debe ser exactamente 100. Actual: {total}",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    # Operación Atómica: Borrar la rúbrica vieja y crear la nueva
-    try:
-        with transaction.atomic():
-            Ponderacion.objects.filter(materia_id=materia_id).delete()
-            
-            nuevas_ponderaciones = [
-                Ponderacion(
-                    materia_id=materia_id,
-                    nombre=item.get("nombre"),
-                    porcentaje=Decimal(str(item.get("porcentaje")))
-                ) for item in data
-            ]
-            Ponderacion.objects.bulk_create(nuevas_ponderaciones)
+    # Validar que cada item tenga nombre y porcentaje
+    for i, item in enumerate(items):
+        if not item.get("nombre"):
+            return Response(
+                {"success": False, "data": None, "message": f"El item {i+1} no tiene nombre"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if Decimal(str(item.get("porcentaje", 0))) <= 0:
+            return Response(
+                {"success": False, "data": None,
+                 "message": f"El porcentaje del item '{item.get('nombre')}' debe ser mayor a 0"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        return Response({
-            "success": True, 
-            "message": "Rúbrica de evaluación actualizada correctamente."
-        }, status=status.HTTP_200_OK)
-        
-    except Exception as e:
-        return Response({"success": False, "message": str(e)}, status=500)
+    # Upsert: borrar existentes y re-crear dentro de una transacción
+    with transaction.atomic():
+        Ponderacion.objects.filter(materia_id=str(materia_id)).delete()
+        nuevas = [
+            Ponderacion(
+                materia_id=str(materia_id),
+                nombre=item["nombre"],
+                porcentaje=Decimal(str(item["porcentaje"])),
+            )
+            for item in items
+        ]
+        Ponderacion.objects.bulk_create(nuevas)
+
+    qs = Ponderacion.objects.filter(materia_id=str(materia_id)).order_by("nombre")
+    return Response(
+        {
+            "success": True,
+            "data": PonderacionSerializer(qs, many=True).data,
+            "message": "Ponderaciones guardadas correctamente",
+        },
+        status=status.HTTP_200_OK,
+    )
