@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package reportes;
+
+// Servicio gRPC del MS-7 Reportes & Estadísticas
+service ReportesService {
+  rpc GenerateReport(GenerateReportRequest) returns (FileResponse);
+  rpc GetHistorialDocente(GetHistorialDocenteRequest) returns (HistorialResponse);
+}
+
+message GenerateReportRequest {
+  string tipo = 1;          // CALIFICACIONES | ASISTENCIAS
+  string formato = 2;       // PDF | XLS | XLSX
+  string materia_id = 3;
+}
+
+message FileResponse {
+  bytes file_bytes = 1;
+  string file_name = 2;
+  string mime_type = 3;
+}
+
+message GetHistorialDocenteRequest {
+  string docente_id = 1;
+}
+
+message StatsPeriodo {
+  string periodo_id = 1;
+  string periodo_nombre = 2;
+  string materia_id = 3;
+  string materia_nombre = 4;
+  int32 total_alumnos = 5;
+  float promedio_grupal = 6;
+  float porcentaje_asistencia = 7;
+}
+
+message HistorialResponse {
+  repeated StatsPeriodo historial = 1;
+}
