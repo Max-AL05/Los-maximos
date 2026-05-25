@@ -1,16 +1,18 @@
 """
-Endpoints REST para sesiones de asistencia QR.
-
-    POST   /sesiones/iniciar        → Docente inicia una sesión de 10 min
-    DELETE /sesiones/<id>/cerrar    → Docente cierra la sesión manualmente
+Endpoints:
+    POST   /sesiones/iniciar
+    DELETE /sesiones/<id>/cerrar
+    GET    /sesiones/<id>/qr         (genera QR en PNG)
 """
-import json
 import hashlib
+import uuid as uuid_lib
+from datetime import datetime, timedelta
+from io import BytesIO
 
-from django.conf import settings
+import qrcode
 from django.core.cache import cache
+from django.http import FileResponse
 from django.utils import timezone
-
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -23,180 +25,147 @@ from .serializers import IniciarSesionSerializer, SesionSerializer
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def iniciar_sesion(request):
-    """
-    Inicia una nueva sesión de pase de lista para una materia.
-
-    Solo puede existir UNA sesión ACTIVA por materia a la vez.
-    Al crear la sesión, inicializa en Redis el set de QRs ya escaneados
-    con un TTL = duracion_minutos + 1 min (margen de seguridad).
-
-    Body JSON:
-        materia_id        (uuid, requerido)
-        duracion_minutos  (int,  default=10)
-        umbral_retardo_min (int, default=5)
-
-    Respuesta exitosa:
-        {"success": true, "data": {sesion...}, "message": "Sesión iniciada"}
-    """
+    """Inicia una sesión de 10 min para una materia."""
     serializer = IniciarSesionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    materia_id = str(serializer.validated_data["materia_id"])
+    materia_id = serializer.validated_data["materia_id"]
     duracion = serializer.validated_data.get("duracion_minutos", 10)
     umbral = serializer.validated_data.get("umbral_retardo_min", 5)
 
-    # 1. Verificar que no exista ya una sesión ACTIVA para esta materia
+    # 1. Verificar que no exista sesión ACTIVA para esa materia
     sesion_activa = Sesion.objects.filter(
-        materia_id=materia_id,
-        estado=EstadoSesion.ACTIVA
+        materia_id=materia_id, estado=EstadoSesion.ACTIVA
     ).first()
 
     if sesion_activa:
-        # Verificar si ya expiró (Django no la cierra automáticamente)
-        if timezone.now() > sesion_activa.fin:
-            # Expiró → cerrarla automáticamente
-            sesion_activa.estado = EstadoSesion.CERRADA
-            sesion_activa.save(update_fields=["estado"])
-        else:
-            return Response(
-                {
-                    "success": False,
-                    "data": SesionSerializer(sesion_activa).data,
-                    "message": "Ya existe una sesión activa para esta materia. Ciérrala primero.",
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
+        return Response(
+            {
+                "success": False,
+                "message": f"Ya existe sesión activa para esta materia (ID: {sesion_activa.id})",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    # 2. Crear la nueva sesión en base de datos
+    # 2. Crear Sesion
     sesion = Sesion.objects.create(
         materia_id=materia_id,
-        docente_id=str(request.user.id),   # ID del docente autenticado
+        docente_id=str(request.user.id),
         duracion_minutos=duracion,
         umbral_retardo_min=umbral,
         estado=EstadoSesion.ACTIVA,
     )
 
-    # 3. Inicializar set en Redis para el anti-replay de tokens QR.
-    #    Clave: "sesion:<uuid>:escaneados"
-    #    TTL: duracion en segundos + 60 segundos de margen
+    # 3. Inicializar en Redis set de escaneados
+    # Clave: "sesion:{id}:escaneados" → set de matrículas que escanearon
     redis_key = f"sesion:{sesion.id}:escaneados"
-    ttl_segundos = (duracion * 60) + 60
+    cache.set(redis_key, set(), timeout=duracion * 60 + 60)  # +1min buffer
 
-    # Guardamos un marcador vacío (el set se pobla al registrar asistencias)
-    cache.set(redis_key, json.dumps([]), timeout=ttl_segundos)
+    # 4. Generar token QR
+    qr_token = str(uuid_lib.uuid4())
+    qr_token_hash = hashlib.sha256(qr_token.encode()).hexdigest()
+
+    # Guardar token en Redis para validación posterior
+    redis_key_token = f"sesion:{sesion.id}:token"
+    cache.set(redis_key_token, qr_token_hash, timeout=duracion * 60 + 60)
 
     return Response(
         {
             "success": True,
-            "data": SesionSerializer(sesion).data,
-            "message": f"Sesión iniciada. Durará {duracion} minutos.",
+            "data": {
+                **SesionSerializer(sesion).data,
+                "qr_token": qr_token,  # Cliente guarda esto
+            },
+            "message": f"Sesión iniciada: {sesion.id}",
         },
         status=status.HTTP_201_CREATED,
     )
 
 
-@api_view(["DELETE"])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def cerrar_sesion(request, sesion_id):
+def generar_qr(request, sesion_id):
     """
-    Cierra una sesión de pase de lista manualmente.
-
-    Al cerrar, marca como AUSENTE a todos los alumnos inscritos
-    en la materia que NO tengan registro de asistencia en esta sesión.
-    (Requiere llamada gRPC a MS-3 para obtener la lista de alumnos.)
-
-    Respuesta exitosa:
-        {"success": true, "data": {sesion...}, "message": "Sesión cerrada"}
+    Genera PNG de código QR con payload:
+    {
+        "sesion_id": "uuid",
+        "token": "token_unico"
+    }
     """
-    # 1. Buscar la sesión
     try:
-        sesion = Sesion.objects.get(id=sesion_id)
+        sesion = Sesion.objects.get(id=sesion_id, estado=EstadoSesion.ACTIVA)
     except Sesion.DoesNotExist:
         return Response(
-            {"success": False, "data": {}, "message": "Sesión no encontrada."},
-            status=status.HTTP_404_NOT_FOUND,
+            {"success": False, "message": "Sesión no existe o está cerrada"},
+            status=404,
         )
 
-    # 2. Validar que la sesión no esté ya cerrada
-    if sesion.estado == EstadoSesion.CERRADA:
+    # Obtener token desde Redis
+    redis_key_token = f"sesion:{sesion.id}:token"
+    qr_token_hash = cache.get(redis_key_token)
+
+    if not qr_token_hash:
         return Response(
-            {
-                "success": False,
-                "data": SesionSerializer(sesion).data,
-                "message": "La sesión ya estaba cerrada.",
-            },
+            {"success": False, "message": "Token expirado o sesión cerrada"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # 3. Cerrar la sesión
-    sesion.estado = EstadoSesion.CERRADA
-    sesion.save(update_fields=["estado"])
+    # Generar nuevo token para cada QR (anti-replay)
+    qr_token = str(uuid_lib.uuid4())
+    new_hash = hashlib.sha256(qr_token.encode()).hexdigest()
+    cache.set(redis_key_token, new_hash, timeout=sesion.duracion_minutos * 60 + 60)
 
-    # 4. Marcar como AUSENTE a los alumnos que no escanearon QR
-    #    Se obtiene la lista de inscritos via gRPC MS-3 y se compara
-    #    con los que ya tienen registro en Asistencia para esta sesión.
+    # Payload QR
+    qr_payload = f"{sesion.id}|{qr_token}"
+
+    # Generar PNG
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(qr_payload)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+    img_io = BytesIO()
+    img.save(img_io, "PNG")
+    img_io.seek(0)
+
+    return FileResponse(img_io, content_type="image/png")
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def cerrar_sesion(request, sesion_id):
+    """Cierra la sesión manualmente (también se cierra automáticamente al expirar)."""
     try:
-        import grpc
-        from django.conf import settings as dj_settings
-        # Importar stubs generados (deben existir en ms-asistencias/protos/)
-        from protos import alumnos_pb2, alumnos_pb2_grpc
-        from apps.asistencias.models import Asistencia, EstadoAsistencia
+        sesion = Sesion.objects.get(id=sesion_id)
+    except Sesion.DoesNotExist:
+        return Response({"success": False, "message": "No existe"}, status=404)
 
-        grpc_target = dj_settings.GRPC_TARGETS.get("alumnos", "localhost:50053")
-        canal = grpc.insecure_channel(grpc_target)
-        stub = alumnos_pb2_grpc.AlumnosServiceStub(canal)
-
-        # Obtener alumnos inscritos en la materia desde MS-3
-        respuesta = stub.GetAlumnosByMateria(
-            alumnos_pb2.GetAlumnosByMateriaRequest(materia_id=str(sesion.materia_id)),
-            timeout=5,
+    if sesion.estado == EstadoSesion.CERRADA:
+        return Response(
+            {"success": False, "message": "Sesión ya está cerrada"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
-        # IDs de alumnos que SÍ registraron asistencia en esta sesión
-        ids_presentes = set(
-            Asistencia.objects.filter(sesion=sesion)
-            .values_list("alumno_id", flat=True)
-        )
+    sesion.estado = EstadoSesion.CERRADA
+    sesion.save()
 
-        # Crear registros AUSENTE para los que no escanearon
-        ausentes_creados = []
-        for alumno_info in respuesta.alumnos:
-            alumno_id = alumno_info.alumno_id
-            if alumno_id not in ids_presentes and alumno_info.activo_en_materia:
-                # Evitar duplicados (por si se llama cerrar dos veces)
-                _, creada = Asistencia.objects.get_or_create(
-                    sesion=sesion,
-                    alumno_id=alumno_id,
-                    defaults={
-                        "materia_id": str(sesion.materia_id),
-                        "estado": EstadoAsistencia.AUSENTE,
-                        "qr_token_hash": hashlib.sha256(
-                            f"ausente_{sesion.id}_{alumno_id}".encode()
-                        ).hexdigest(),
-                    },
-                )
-                if creada:
-                    ausentes_creados.append(alumno_id)
+    # Limpiar Redis
+    redis_key = f"sesion:{sesion.id}:escaneados"
+    redis_key_token = f"sesion:{sesion.id}:token"
+    cache.delete(redis_key)
+    cache.delete(redis_key_token)
 
-        canal.close()
-        mensaje = (
-            f"Sesión cerrada. "
-            f"{len(ids_presentes)} presentes/retardos, "
-            f"{len(ausentes_creados)} marcados como ausentes."
-        )
-
-    except Exception as exc:
-        # Si falla gRPC, cerramos igual pero avisamos
-        mensaje = (
-            f"Sesión cerrada. "
-            f"Advertencia: no se pudo registrar ausentes automáticamente ({exc})."
-        )
+    # TODO: marcar como AUSENTE a los alumnos inscritos que no aparecen en asistencias
 
     return Response(
         {
             "success": True,
             "data": SesionSerializer(sesion).data,
-            "message": mensaje,
-        },
-        status=status.HTTP_200_OK,
+            "message": "Sesión cerrada",
+        }
     )

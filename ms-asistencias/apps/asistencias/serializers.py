@@ -1,28 +1,20 @@
-"""
-Serializers para el módulo de asistencias.
-"""
+"""Serializers para Asistencias."""
 from rest_framework import serializers
 from .models import Asistencia
 
 
 class RegistrarAsistenciaSerializer(serializers.Serializer):
-    """Valida el body de POST /asistencias/registrar."""
+    """Validación para registrar asistencia por QR."""
     sesion_id = serializers.UUIDField()
-    qr_token = serializers.CharField(max_length=2048)
+    qr_token = serializers.CharField(max_length=36)  # UUID como string
 
 
 class AsistenciaSerializer(serializers.ModelSerializer):
-    """Serializa un registro de Asistencia hacia el cliente REST."""
+    """Serializer de lectura para Asistencia."""
 
     class Meta:
         model = Asistencia
         fields = [
-            "id",
-            "sesion_id",
-            "alumno_id",
-            "materia_id",
-            "fecha",
-            "estado",
-            # qr_token_hash se omite por seguridad (es dato de auditoría interna)
+            'id', 'sesion', 'alumno_id', 'materia_id', 'fecha', 'estado'
         ]
-        read_only_fields = fields
+        read_only_fields = ['id', 'fecha']
