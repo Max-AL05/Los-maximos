@@ -104,7 +104,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # === Django REST Framework ===
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "common.authentication.StatelessJWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
@@ -158,14 +158,21 @@ SPECTACULAR_SETTINGS = {
 
 
 # === Redis (sesiones volátiles + anti-replay de tokens QR) ===
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+# Redis Cache Configuration
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": REDIS_URL,
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
     }
 }
+
+# Session using Redis
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
 
 # === QR ===
 # Clave Fernet (32 bytes urlsafe-base64) compartida con el cliente alumno para
