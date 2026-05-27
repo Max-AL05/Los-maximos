@@ -145,15 +145,14 @@ services:
     depends_on:
       db-auth:
         condition: service_healthy
-    # Healthcheck real: el puerto REST 8001 debe estar aceptando conexiones.
-    # Así los servicios que dependen de ms-auth esperan a que esté LISTO,
-    # no solo a que el contenedor haya arrancado.
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',8001),2)\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+    # Healthcheck deshabilitado temporalmente (timeouts en Windows).
+    # Los demás MS usan condition: service_started para no bloquearse.
+    # healthcheck:
+    #   test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',8001),2)\""]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 20s
     restart: on-failure
 
   # MS-2 · Periodos académicos y materias.
@@ -169,7 +168,7 @@ services:
       db-periodos:
         condition: service_healthy
       ms-auth:
-        condition: service_healthy
+        condition: service_started
     restart: on-failure
 
   # MS-3 · Docentes y alumnos.
@@ -185,7 +184,7 @@ services:
       db-alumnos:
         condition: service_healthy
       ms-auth:
-        condition: service_healthy
+        condition: service_started
     restart: on-failure
 
   # MS-4 · Calificaciones y ponderaciones. Cliente gRPC de ms-alumnos.
@@ -201,7 +200,7 @@ services:
       db-calificaciones:
         condition: service_healthy
       ms-auth:
-        condition: service_healthy
+        condition: service_started
       ms-alumnos:
         condition: service_started
     restart: on-failure
@@ -221,7 +220,7 @@ services:
       redis:
         condition: service_healthy
       ms-auth:
-        condition: service_healthy
+        condition: service_started
     restart: on-failure
 
   # MS-6 · Notificaciones por correo.
@@ -237,7 +236,7 @@ services:
       db-notificaciones:
         condition: service_healthy
       ms-auth:
-        condition: service_healthy
+        condition: service_started
     restart: on-failure
 
   # MS-7 · Reportes y estadísticas. Cliente gRPC de periodos/alumnos/
@@ -254,7 +253,7 @@ services:
       db-reportes:
         condition: service_healthy
       ms-auth:
-        condition: service_healthy
+        condition: service_started
       ms-periodos:
         condition: service_started
       ms-alumnos:
