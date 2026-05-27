@@ -313,3 +313,4 @@ SPECTACULAR_SETTINGS = {
 
     "SERVE_INCLUDE_SCHEMA": False,
 }
+GRPC_PORT = int(os.environ.get('GRPC_PORT', 50052))

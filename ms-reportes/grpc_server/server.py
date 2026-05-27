@@ -13,8 +13,9 @@ import grpc
 
 # Configurar Django ANTES de importar modelos
 BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR))
-sys.path.insert(0, str(BASE_DIR / "protos"))
+sys.path.insert(0, "/app")
+sys.path.insert(0, "/app/protos")
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 

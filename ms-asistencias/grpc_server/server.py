@@ -23,7 +23,8 @@ import grpc
 # Configurar Django ANTES de importar cualquier modelo o servicer.
 # Necesario porque los servicers usan el ORM de Django.
 # ---------------------------------------------------------------------------
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, "/app")
+sys.path.insert(0, "/app/protos")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 

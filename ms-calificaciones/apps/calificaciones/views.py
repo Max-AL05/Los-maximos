@@ -2,7 +2,7 @@
 Endpoints de Actividades y Calificaciones:
     GET/POST/PUT/DELETE /actividades/          (ViewSet)
     GET/POST/PUT/DELETE /calificaciones/       (ViewSet)
-    POST                /calificaciones/importar  (Excel masivo)
+    POST                /importar-calificaciones/  (Excel masivo)
     GET                 /concentrado/<materia_id> (promedios ponderados)
 """
 import io
@@ -49,10 +49,12 @@ def _get_alumnos_materia(materia_id: str) -> list[dict]:
         import grpc
         from protos import alumnos_pb2, alumnos_pb2_grpc
         target = settings.GRPC_TARGETS["alumnos"]
+        timeout = getattr(settings, "GRPC_DEFAULT_TIMEOUT", 5)
         with grpc.insecure_channel(target) as channel:
             stub = alumnos_pb2_grpc.AlumnosServiceStub(channel)
             resp = stub.GetAlumnosByMateria(
-                alumnos_pb2.GetAlumnosByMateriaRequest(materia_id=materia_id)
+                alumnos_pb2.GetAlumnosByMateriaRequest(materia_id=materia_id),
+                timeout=timeout,
             )
             return [
                 {
@@ -113,10 +115,10 @@ def _calcular_concentrado(materia_id: str) -> list[dict]:
 
         redondeado = _redondear_institucional(promedio_ponderado)
         resultado.append({
-            "alumno_id":          alumno_id,
-            "matricula":          alumno["matricula"],
-            "nombre_completo":    alumno["nombre_completo"],
-            "promedio_real":      float(round(promedio_ponderado, 2)),
+            "alumno_id":           alumno_id,
+            "matricula":           alumno["matricula"],
+            "nombre_completo":     alumno["nombre_completo"],
+            "promedio_real":       float(round(promedio_ponderado, 2)),
             "promedio_redondeado": redondeado,
             "estado": "APROBADO" if redondeado >= 6 else "REPROBADO",
         })
@@ -209,7 +211,7 @@ class CalificacionViewSet(viewsets.ModelViewSet):
 @permission_classes([IsAuthenticated])
 def importar_calificaciones(request):
     """
-    POST /calificaciones/importar
+    POST /api/importar-calificaciones/
     Body multipart:
         - actividad_id: UUID
         - archivo_excel: .xlsx
@@ -287,7 +289,7 @@ def importar_calificaciones(request):
 @permission_classes([IsAuthenticated])
 def concentrado(request, materia_id):
     """
-    GET /concentrado/<materia_id>
+    GET /api/concentrado/<materia_id>/
     Devuelve el concentrado de calificaciones con promedio ponderado real y redondeado.
     """
     try:

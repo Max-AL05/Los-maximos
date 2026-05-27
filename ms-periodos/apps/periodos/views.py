@@ -10,7 +10,9 @@ Endpoints:
     POST   /periodos/importar
     GET    /periodos/activo
 """
+import grpc
 import pdfplumber
+from django.conf import settings
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -22,6 +24,57 @@ from apps.materias.models import Materia
 from .serializers import PeriodoSerializer, ImportarMateriasSerializer
 
 
+# ---------------------------------------------------------------------------
+# Helper: resolver nombre de docente a UUID via gRPC MS-3
+# ---------------------------------------------------------------------------
+def _resolver_docente_id(nombre_docente: str) -> str:
+    """
+    Consulta MS-3 vía gRPC para obtener el UUID del docente por nombre.
+    Si no lo encuentra o falla, devuelve el nombre original como fallback
+    para no perder el dato del PDF.
+    """
+    try:
+        from protos import periodos_pb2, periodos_pb2_grpc
+        # MS-3 no expone búsqueda por nombre directamente en el proto,
+        # así que buscamos via REST interno como fallback seguro.
+        # Por ahora guardamos el nombre — se puede resolver en un proceso posterior
+        # cuando MS-3 esté disponible.
+        return nombre_docente
+    except Exception:
+        return nombre_docente
+
+
+def _buscar_docente_por_nombre(nombre_docente: str) -> str | None:
+    """
+    Llama a MS-3 vía REST interno para buscar el UUID del docente por nombre completo.
+    Devuelve el UUID como string, o None si no se encuentra.
+    """
+    try:
+        import requests
+        url = getattr(settings, "REST_URL_ALUMNOS", "http://ms-alumnos:8003")
+        resp = requests.get(
+            f"{url}/docentes/",
+            params={"search": nombre_docente},
+            timeout=5,
+        )
+        if resp.status_code == 200:
+            data = resp.json().get("data", {})
+            resultados = data.get("results", data) if isinstance(data, dict) else data
+            if isinstance(resultados, list) and resultados:
+                # Buscar coincidencia exacta por nombre
+                for doc in resultados:
+                    if doc.get("nombre_completo", "").strip().lower() == nombre_docente.strip().lower():
+                        return str(doc.get("id") or doc.get("docente_id"))
+                # Si no hay exacta, devolver el primero
+                return str(resultados[0].get("id") or resultados[0].get("docente_id"))
+    except Exception:
+        pass
+    return None
+
+
+# ---------------------------------------------------------------------------
+# ViewSets
+# ---------------------------------------------------------------------------
 class PeriodoViewSet(viewsets.ModelViewSet):
     queryset = Periodo.objects.all()
     serializer_class = PeriodoSerializer
@@ -64,7 +117,7 @@ class PeriodoViewSet(viewsets.ModelViewSet):
         """
         POST /periodos/importar
         Sube un PDF de programación académica y extrae las materias.
-        Formato esperado en el PDF: filas con NRC, nombre, sección, clave, docente, horario.
+        Intenta resolver el nombre del docente a UUID via MS-3.
         """
         serializer = ImportarMateriasSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -105,11 +158,21 @@ class PeriodoViewSet(viewsets.ModelViewSet):
                         nombre   = fila[1]
                         seccion  = fila[2]
                         clave    = fila[3]
-                        docente  = fila[4]   # nombre del docente en el PDF
+                        nombre_docente = fila[4]
                         horario  = fila[5]
 
                         if not nrc or not nombre:
                             continue
+
+                        # Intentar resolver el nombre del docente a UUID
+                        docente_id = _buscar_docente_por_nombre(nombre_docente)
+                        if not docente_id:
+                            # Guardar el nombre como fallback — se puede resolver después
+                            docente_id = nombre_docente
+                            errores.append({
+                                "nrc": nrc,
+                                "aviso": f"No se pudo resolver UUID del docente '{nombre_docente}', se guardó el nombre",
+                            })
 
                         # Crear o actualizar la materia
                         materia, created = Materia.objects.update_or_create(
@@ -120,13 +183,14 @@ class PeriodoViewSet(viewsets.ModelViewSet):
                                 "nombre":     nombre,
                                 "clave":      clave,
                                 "horario":    horario,
-                                "docente_id": docente,  # se resolverá a UUID vía gRPC MS-3 después
+                                "docente_id": docente_id,
                             },
                         )
                         materias_creadas.append({
-                            "nrc":    nrc,
-                            "nombre": nombre,
-                            "nueva":  created,
+                            "nrc":         nrc,
+                            "nombre":      nombre,
+                            "docente_id":  docente_id,
+                            "nueva":       created,
                         })
 
         except Exception as exc:
@@ -141,7 +205,7 @@ class PeriodoViewSet(viewsets.ModelViewSet):
                 "data": {
                     "importadas": len(materias_creadas),
                     "materias":   materias_creadas,
-                    "errores":    errores,
+                    "avisos":     errores,
                 },
                 "message": f"{len(materias_creadas)} materias importadas correctamente",
             },

@@ -137,15 +137,16 @@ CORS_ALLOW_CREDENTIALS = True
 
 # === gRPC (otros MS a los que este servicio puede llamar) ===
 GRPC_TARGETS = {
-    "auth": os.environ.get("GRPC_AUTH_URL", "localhost:50051"),
-    "periodos": os.environ.get("GRPC_PERIODOS_URL", "localhost:50052"),
-    "alumnos": os.environ.get("GRPC_ALUMNOS_URL", "localhost:50053"),
-    "calificaciones": os.environ.get("GRPC_CALIFICACIONES_URL", "localhost:50054"),
-    "asistencias": os.environ.get("GRPC_ASISTENCIAS_URL", "localhost:50055"),
-    "notificaciones": os.environ.get("GRPC_NOTIFICACIONES_URL", "localhost:50056"),
-    "reportes": os.environ.get("GRPC_REPORTES_URL", "localhost:50057"),
+    "auth": os.environ.get("GRPC_AUTH_URL", "ms-auth:50051"),
+    "periodos": os.environ.get("GRPC_PERIODOS_URL", "ms-periodos:50052"),
+    "alumnos": os.environ.get("GRPC_ALUMNOS_URL", "ms-alumnos:50053"),
+    "calificaciones": os.environ.get("GRPC_CALIFICACIONES_URL", "ms-calificaciones:50054"),
+    "asistencias": os.environ.get("GRPC_ASISTENCIAS_URL", "ms-asistencias:50055"),
+    "notificaciones": os.environ.get("GRPC_NOTIFICACIONES_URL", "ms-notificaciones:50056"),
+    "reportes": os.environ.get("GRPC_REPORTES_URL", "ms-reportes:50057"),
 }
-GRPC_PORT = int(os.environ.get("GRPC_PORT", 50051))
+GRPC_PORT = int(os.environ.get("GRPC_PORT", 50053))
+
 
 
 # === drf-spectacular (OpenAPI / Swagger) ===

@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package calificaciones;
+
+// Servicio gRPC del MS-4 Calificaciones & Ponderaciones
+service CalificacionesService {
+  rpc GetConcentrado(GetConcentradoRequest) returns (ConcentradoResponse);
+  rpc GetPromedioAlumno(GetPromedioAlumnoRequest) returns (PromedioResponse);
+  rpc GetEstadisticasMateria(GetEstadisticasMateriaRequest) returns (EstadisticasMateria);
+}
+
+message GetConcentradoRequest {
+  string materia_id = 1;
+}
+
+message AlumnoCalif {
+  string alumno_id = 1;
+  string matricula = 2;
+  string nombre_completo = 3;
+  float promedio_real = 4;
+  int32 promedio_redondeado = 5;
+  string estado = 6;       // APROBADO | REPROBADO | EN_CURSO
+}
+
+message ConcentradoResponse {
+  repeated AlumnoCalif alumnos = 1;
+}
+
+message GetPromedioAlumnoRequest {
+  string alumno_id = 1;
+  string materia_id = 2;
+}
+
+message PromedioResponse {
+  float promedio_real = 1;
+  int32 promedio_redondeado = 2;
+}
+
+message GetEstadisticasMateriaRequest {
+  string materia_id = 1;
+}
+
+message EstadisticasMateria {
+  string materia_id = 1;
+  int32 total_alumnos = 2;
+  int32 aprobados = 3;
+  int32 reprobados = 4;
+  float promedio_grupal = 5;
+  float calificacion_maxima = 6;
+  float calificacion_minima = 7;
+}

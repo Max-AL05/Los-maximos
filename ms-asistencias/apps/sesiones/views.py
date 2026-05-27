@@ -2,11 +2,12 @@
 Endpoints:
     POST   /sesiones/iniciar
     DELETE /sesiones/<id>/cerrar
-    GET    /sesiones/<id>/qr         (genera QR en PNG)
+    GET    /sesiones/<id>/qr
+    GET    /sesiones/<id>/estado
 """
 import hashlib
 import uuid as uuid_lib
-from datetime import datetime, timedelta
+from datetime import timedelta
 from io import BytesIO
 
 import qrcode
@@ -57,15 +58,13 @@ def iniciar_sesion(request):
     )
 
     # 3. Inicializar en Redis set de escaneados
-    # Clave: "sesion:{id}:escaneados" → set de matrículas que escanearon
     redis_key = f"sesion:{sesion.id}:escaneados"
-    cache.set(redis_key, set(), timeout=duracion * 60 + 60)  # +1min buffer
+    cache.set(redis_key, set(), timeout=duracion * 60 + 60)
 
     # 4. Generar token QR
     qr_token = str(uuid_lib.uuid4())
     qr_token_hash = hashlib.sha256(qr_token.encode()).hexdigest()
 
-    # Guardar token en Redis para validación posterior
     redis_key_token = f"sesion:{sesion.id}:token"
     cache.set(redis_key_token, qr_token_hash, timeout=duracion * 60 + 60)
 
@@ -74,7 +73,7 @@ def iniciar_sesion(request):
             "success": True,
             "data": {
                 **SesionSerializer(sesion).data,
-                "qr_token": qr_token,  # Cliente guarda esto
+                "qr_token": qr_token,
             },
             "message": f"Sesión iniciada: {sesion.id}",
         },
@@ -86,11 +85,8 @@ def iniciar_sesion(request):
 @permission_classes([IsAuthenticated])
 def generar_qr(request, sesion_id):
     """
-    Genera PNG de código QR con payload:
-    {
-        "sesion_id": "uuid",
-        "token": "token_unico"
-    }
+    GET /sesiones/<sesion_id>/qr
+    Genera PNG de código QR dinámico con token rotativo (anti-replay).
     """
     try:
         sesion = Sesion.objects.get(id=sesion_id, estado=EstadoSesion.ACTIVA)
@@ -139,7 +135,7 @@ def generar_qr(request, sesion_id):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def cerrar_sesion(request, sesion_id):
-    """Cierra la sesión manualmente (también se cierra automáticamente al expirar)."""
+    """Cierra la sesión manualmente."""
     try:
         sesion = Sesion.objects.get(id=sesion_id)
     except Sesion.DoesNotExist:
@@ -152,20 +148,60 @@ def cerrar_sesion(request, sesion_id):
         )
 
     sesion.estado = EstadoSesion.CERRADA
-    sesion.save()
+    sesion.save(update_fields=["estado"])
 
     # Limpiar Redis
-    redis_key = f"sesion:{sesion.id}:escaneados"
-    redis_key_token = f"sesion:{sesion.id}:token"
-    cache.delete(redis_key)
-    cache.delete(redis_key_token)
-
-    # TODO: marcar como AUSENTE a los alumnos inscritos que no aparecen en asistencias
+    cache.delete(f"sesion:{sesion.id}:escaneados")
+    cache.delete(f"sesion:{sesion.id}:token")
 
     return Response(
         {
             "success": True,
             "data": SesionSerializer(sesion).data,
             "message": "Sesión cerrada",
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def estado_sesion(request, sesion_id):
+    """
+    GET /sesiones/<sesion_id>/estado
+    Devuelve estado actual y segundos restantes.
+    Cierra automáticamente si ya expiró.
+    El frontend puede llamar esto cada 30s para actualizar el countdown.
+    """
+    try:
+        sesion = Sesion.objects.get(id=sesion_id)
+    except Sesion.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Sesión no encontrada"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if sesion.estado == EstadoSesion.ACTIVA:
+        ahora = timezone.now()
+        fin_sesion = sesion.inicio + timedelta(minutes=sesion.duracion_minutos)
+
+        if ahora >= fin_sesion:
+            sesion.estado = EstadoSesion.CERRADA
+            sesion.save(update_fields=["estado"])
+            cache.delete(f"sesion:{sesion.id}:escaneados")
+            cache.delete(f"sesion:{sesion.id}:token")
+            segundos_restantes = 0
+        else:
+            segundos_restantes = int((fin_sesion - ahora).total_seconds())
+    else:
+        segundos_restantes = 0
+
+    return Response(
+        {
+            "success": True,
+            "data": {
+                **SesionSerializer(sesion).data,
+                "segundos_restantes": segundos_restantes,
+            },
+            "message": "",
         }
     )

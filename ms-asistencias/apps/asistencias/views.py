@@ -11,19 +11,44 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from apps.sesiones.models import Sesion, EstadoSesion
 from .models import Asistencia, EstadoAsistencia
 from .serializers import RegistrarAsistenciaSerializer, AsistenciaSerializer
 
 
+# ---------------------------------------------------------------------------
+# Helper: cerrar sesión si ya expiró
+# ---------------------------------------------------------------------------
+def _verificar_expiracion(sesion: Sesion) -> bool:
+    """
+    Verifica si la sesión ya superó su duración.
+    Si expiró, la cierra automáticamente y limpia Redis.
+    Devuelve True si expiró, False si sigue activa.
+    """
+    ahora = timezone.now()
+    fin_sesion = sesion.inicio + timedelta(minutes=sesion.duracion_minutos)
+
+    if ahora >= fin_sesion:
+        sesion.estado = EstadoSesion.CERRADA
+        sesion.save(update_fields=["estado"])
+        cache.delete(f"sesion:{sesion.id}:escaneados")
+        cache.delete(f"sesion:{sesion.id}:token")
+        return True
+
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def registrar_asistencia(request):
     """
     Registra asistencia cuando alumno escanea QR.
-    
+
     Payload:
     {
         "sesion_id": "uuid",
@@ -45,7 +70,14 @@ def registrar_asistencia(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # 2. Validar token
+    # 2. Verificar si ya expiró (cierre automático)
+    if _verificar_expiracion(sesion):
+        return Response(
+            {"success": False, "message": "La sesión expiró y fue cerrada automáticamente"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # 3. Validar token QR
     qr_token_hash = hashlib.sha256(qr_token.encode()).hexdigest()
     redis_key_token = f"sesion:{sesion.id}:token"
     stored_hash = cache.get(redis_key_token)
@@ -56,57 +88,44 @@ def registrar_asistencia(request):
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-    # 3. Calcular estado (PRESENTE, RETARDO, AUSENTE)
+    # 4. Calcular estado (PRESENTE o RETARDO)
     ahora = timezone.now()
-    tiempo_transcurrido = (ahora - sesion.inicio).total_seconds() / 60  # en minutos
+    tiempo_transcurrido = (ahora - sesion.inicio).total_seconds() / 60
 
-    if tiempo_transcurrido < 0:
+    if tiempo_transcurrido <= sesion.umbral_retardo_min:
         estado = EstadoAsistencia.PRESENTE
-    elif tiempo_transcurrido <= sesion.umbral_retardo_min:
-        estado = EstadoAsistencia.PRESENTE
-    elif tiempo_transcurrido < sesion.duracion_minutos:
-        estado = EstadoAsistencia.RETARDO
     else:
-        return Response(
-            {
-                "success": False,
-                "message": "Sesión ya expiró",
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        estado = EstadoAsistencia.RETARDO
 
-    # 4. Anti-duplicado: verificar si ya escaneó en esta sesión
+    # 5. Anti-duplicado via Redis
     redis_key_escaneados = f"sesion:{sesion.id}:escaneados"
-    escaneados = cache.get(redis_key_escaneados)
-
-    if escaneados is None:
-        escaneados = set()
-
+    escaneados = cache.get(redis_key_escaneados) or set()
     alumno_id = str(request.user.id)
 
     if alumno_id in escaneados:
         return Response(
-            {
-                "success": False,
-                "message": "Ya registraste asistencia en esta sesión",
-            },
+            {"success": False, "message": "Ya registraste asistencia en esta sesión"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # 5. Registrar asistencia (upsert)
+    # 6. Registrar asistencia
     asistencia, created = Asistencia.objects.update_or_create(
         sesion=sesion,
         alumno_id=alumno_id,
         defaults={
-            "materia_id": sesion.materia_id,
-            "estado": estado,
+            "materia_id":    sesion.materia_id,
+            "estado":        estado,
             "qr_token_hash": qr_token_hash,
         },
     )
 
-    # 6. Actualizar set en Redis
+    # 7. Actualizar set en Redis
     escaneados.add(alumno_id)
-    cache.set(redis_key_escaneados, escaneados, timeout=sesion.duracion_minutos * 60 + 60)
+    cache.set(
+        redis_key_escaneados,
+        escaneados,
+        timeout=sesion.duracion_minutos * 60 + 60,
+    )
 
     return Response(
         {
@@ -122,9 +141,8 @@ def registrar_asistencia(request):
 @permission_classes([IsAuthenticated])
 def asistencias_hoy(request, materia_id):
     """
+    GET /asistencias/<materia_id>/hoy
     Retorna asistencias de una materia HOY.
-    
-    Filtrada por docente si es docente, o por alumno si es alumno.
     """
     hoy = timezone.now().date()
 
@@ -133,7 +151,6 @@ def asistencias_hoy(request, materia_id):
         fecha__date=hoy,
     ).select_related("sesion")
 
-    # Opcionalmente filtrar por docente
     role = getattr(request.user, "role", None)
     if role == "DOCENTE":
         asistencias = asistencias.filter(sesion__docente_id=str(request.user.id))
@@ -153,8 +170,9 @@ def asistencias_hoy(request, materia_id):
 @permission_classes([IsAuthenticated])
 def asistencias_historial(request, materia_id):
     """
+    GET /asistencias/<materia_id>/historial
     Retorna historial de asistencias de una materia.
-    
+
     Parámetros:
     - dias: últimos N días (default 30)
     """
@@ -171,7 +189,6 @@ def asistencias_historial(request, materia_id):
         fecha__gte=desde,
     ).select_related("sesion").order_by("-fecha")
 
-    # Filtrar por docente o alumno
     role = getattr(request.user, "role", None)
     if role == "DOCENTE":
         asistencias = asistencias.filter(sesion__docente_id=str(request.user.id))
