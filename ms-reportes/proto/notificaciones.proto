@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package notificaciones;
+
+// Servicio gRPC del MS-6 Notificaciones
+service NotificacionesService {
+  rpc SendBienvenida(SendBienvenidaRequest) returns (SendResponse);
+  rpc SendBajaNotif(SendBajaRequest) returns (SendResponse);
+  rpc SendCierreMateria(SendCierreMateriaRequest) returns (SendResponse);
+  rpc SendResetPassword(SendResetPasswordRequest) returns (SendResponse);
+}
+
+message SendBienvenidaRequest {
+  string alumno_id = 1;
+  string materia_id = 2;
+  string clave_unica = 3;
+}
+
+message SendBajaRequest {
+  string alumno_id = 1;
+  string docente_id = 2;
+  string materia_id = 3;
+}
+
+message SendCierreMateriaRequest {
+  string materia_id = 1;
+}
+
+message SendResetPasswordRequest {
+  string user_id = 1;
+  string reset_link = 2;
+}
+
+message SendResponse {
+  bool success = 1;
+  string message = 2;
+  string notificacion_id = 3;
+}

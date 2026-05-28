@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>Cierre de materia</title></head>
+<body style="font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px;">
+  <table align="center" width="600" cellpadding="0" cellspacing="0"
+         style="background:#ffffff; border-radius:8px; overflow:hidden;">
+    <tr>
+      <td style="background:#2e7d32; color:#fff; padding:20px; text-align:center;">
+        <h1 style="margin:0;">Cierre de Materia</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:30px; color:#333;">
+        <h2>Hola, {{ alumno_nombre }}</h2>
+        <p>Se ha cerrado el curso de <strong>{{ materia_nombre }}</strong>
+           {% if periodo %}correspondiente al periodo <strong>{{ periodo }}</strong>{% endif %}.</p>
+        {% if calificacion_final is not None %}
+        <div style="background:#e8f5e9; border-left:4px solid #2e7d32;
+                    padding:15px; text-align:center;">
+          <p style="margin:0; font-size:14px;">Tu calificación final es:</p>
+          <p style="margin:5px 0; font-size:32px; font-weight:bold; color:#2e7d32;">
+            {{ calificacion_final }}
+          </p>
+        </div>
+        {% endif %}
+        <p style="margin-top:20px;">Puedes consultar el detalle de tus calificaciones
+           en el portal AGM.</p>
+        <p>¡Felicidades por completar el curso!</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#f0f0f0; padding:15px; font-size:12px;
+                 color:#777; text-align:center;">
+        Sistema AGM – BUAP
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

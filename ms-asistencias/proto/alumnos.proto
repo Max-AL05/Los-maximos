@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package alumnos;
+
+// Servicio gRPC del MS-3 Docentes & Alumnos
+service AlumnosService {
+  rpc GetAlumnosByMateria(GetAlumnosByMateriaRequest) returns (AlumnosList);
+  rpc GetAlumnoById(GetAlumnoByIdRequest) returns (AlumnoInfo);
+  rpc IsAlumnoEnMateria(IsAlumnoEnMateriaRequest) returns (IsAlumnoEnMateriaResponse);
+}
+
+message GetAlumnosByMateriaRequest {
+  string materia_id = 1;
+}
+
+message AlumnoInfo {
+  string alumno_id = 1;
+  string matricula = 2;
+  string nombre_completo = 3;
+  string correo = 4;
+  string tipo_formacion = 5;
+  bool activo_en_materia = 6;
+}
+
+message AlumnosList {
+  repeated AlumnoInfo alumnos = 1;
+}
+
+message GetAlumnoByIdRequest {
+  string alumno_id = 1;
+}
+
+message IsAlumnoEnMateriaRequest {
+  string alumno_id = 1;
+  string materia_id = 2;
+}
+
+message IsAlumnoEnMateriaResponse {
+  bool inscrito = 1;
+  bool dado_de_baja = 2;
+}

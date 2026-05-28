@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package asistencias;
+
+// Servicio gRPC del MS-5 Asistencias QR
+service AsistenciasService {
+  rpc GetAsistenciaAlumno(GetAsistenciaAlumnoRequest) returns (AsistenciasList);
+  rpc GetEstadisticasAsistencia(GetEstadisticasAsistenciaRequest) returns (EstadisticasAsistencia);
+}
+
+message GetAsistenciaAlumnoRequest {
+  string alumno_id = 1;
+  string materia_id = 2;
+}
+
+message Asistencia {
+  string asistencia_id = 1;
+  string fecha = 2;        // ISO-8601
+  string estado = 3;       // PRESENTE | RETARDO | AUSENTE
+  string sesion_id = 4;
+}
+
+message AsistenciasList {
+  repeated Asistencia asistencias = 1;
+}
+
+message GetEstadisticasAsistenciaRequest {
+  string materia_id = 1;
+}
+
+message EstadisticasAsistencia {
+  string materia_id = 1;
+  int32 total_sesiones = 2;
+  int32 total_asistencias = 3;
+  int32 total_retardos = 4;
+  int32 total_ausencias = 5;
+  float porcentaje_asistencia = 6;
+}

@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
+    PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+COPY . .
+RUN mkdir -p protos && touch protos/__init__.py && \
+    python -m grpc_tools.protoc -I./proto \
+        --python_out=./protos \
+        --grpc_python_out=./protos \
+        ./proto/alumnos.proto \
+        ./proto/notificaciones.proto \
+        ./proto/periodos.proto
+EXPOSE 8003 50053
+CMD ["sh", "-c", "python manage.py migrate --noinput && (PYTHONPATH=/app python -m grpc_server.server &) && python manage.py runserver 0.0.0.0:8003"]

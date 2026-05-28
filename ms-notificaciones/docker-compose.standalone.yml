@@ -1,0 +1,39 @@
+# docker-compose para ejecutar SOLO ms-notificaciones + su PostgreSQL.
+# Útil para desarrollo y testing aislado con Postman.
+#
+# Uso:
+#   docker-compose -f docker-compose.standalone.yml up --build
+#
+# Cuando integres con los demás MS, usa el docker-compose.yml de la raíz.
+
+services:
+  db-notificaciones:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agm_notif_db
+      POSTGRES_USER: agm_user
+      POSTGRES_PASSWORD: agm_password
+    volumes:
+      - data-notificaciones:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agm_user -d agm_notif_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ms-notificaciones:
+    build: .
+    env_file: .env
+    environment:
+      DB_HOST: db-notificaciones
+    depends_on:
+      db-notificaciones:
+        condition: service_healthy
+    ports:
+      - "8006:8006"
+      - "50056:50056"
+
+volumes:
+  data-notificaciones:

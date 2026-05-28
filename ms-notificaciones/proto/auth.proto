@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package auth;
+
+// Servicio gRPC del MS-1 Auth & Users
+// Métodos consumidos por otros microservicios para validar identidad y roles.
+service AuthService {
+  rpc ValidateToken(ValidateTokenRequest) returns (UserClaims);
+  rpc GetUserById(GetUserByIdRequest) returns (UserProfile);
+  rpc CheckRole(CheckRoleRequest) returns (CheckRoleResponse);
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message UserClaims {
+  string user_id = 1;
+  string email = 2;
+  string role = 3;          // ADMIN | DOCENTE | ALUMNO
+  bool is_valid = 4;
+  int64 exp = 5;
+}
+
+message GetUserByIdRequest {
+  string user_id = 1;
+}
+
+message UserProfile {
+  string user_id = 1;
+  string email = 2;
+  string nombre_completo = 3;
+  string role = 4;
+  bool is_active = 5;
+}
+
+message CheckRoleRequest {
+  string user_id = 1;
+  string role = 2;
+}
+
+message CheckRoleResponse {
+  bool has_role = 1;
+}
